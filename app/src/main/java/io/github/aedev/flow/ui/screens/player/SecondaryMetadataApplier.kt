@@ -2,6 +2,9 @@ package io.github.aedev.flow.ui.screens.player
 
 import android.content.Context
 import android.util.Log
+import io.github.aedev.flow.R
+import io.github.aedev.flow.data.contentfilter.family.FamilyCategoryBlock
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.recommendation.FlowNeuroEngine
@@ -132,6 +135,24 @@ internal class SecondaryMetadataApplier(
     /** Kept on the video, so the watch signal carries it. */
     private fun applyCategory(result: SecondaryMetadata.Category) {
         if (!isLoadCurrent(result.loadToken)) return
+        // The family app never plays a blocked category — Music, Entertainment, Film &
+        // Animation — from a channel that is not approved. Approved channels are exempt: their
+        // uploads are routinely categorized Music. The video may have played a moment before
+        // the category arrived; pausing here is the stop, and a retry re-blocks (the category
+        // is checked again on every load).
+        val video = uiState.value.cachedVideo?.takeIf { it.id == result.videoId }
+        if (video != null && FamilyCategoryBlock.isBlocked(result.category) &&
+            !FamilyMode.channelMatcher().allows(video.channelId, video.channelHandle)
+        ) {
+            playerManager.pause()
+            uiState.update {
+                it.copy(
+                    error = context.getString(R.string.family_blocked_video),
+                    errorHint = context.getString(R.string.family_blocked_video_hint),
+                )
+            }
+            return
+        }
         if (PlaybackSpeedPolicy.isMusic(musicVideoType = null, category = result.category, openedAsMusic = false)) {
             scope.launch { playbackPreparer.applyLateMusicSignal(uiState.value.speedContextFor(result.videoId)) }
         }
