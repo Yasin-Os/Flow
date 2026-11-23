@@ -92,14 +92,21 @@ internal class FamilySettingsViewModel
             confirm: String,
         ) {
             when {
-                !FamilyPinRepository.isValidPin(pin) -> _pinError.value = R.string.family_pin_invalid
-                pin != confirm -> _pinError.value = R.string.family_pin_mismatch
-                else ->
+                !FamilyPinRepository.isValidPin(pin) -> {
+                    _pinError.value = R.string.family_pin_invalid
+                }
+
+                pin != confirm -> {
+                    _pinError.value = R.string.family_pin_mismatch
+                }
+
+                else -> {
                     viewModelScope.launch {
                         pinRepository.setPin(pin)
                         _pinError.value = null
                         _unlocked.value = true
                     }
+                }
             }
         }
 
