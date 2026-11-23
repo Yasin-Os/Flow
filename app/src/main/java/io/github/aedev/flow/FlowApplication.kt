@@ -12,6 +12,10 @@ import coil3.SingletonImageLoader
 import dagger.hilt.android.HiltAndroidApp
 import io.github.aedev.flow.applock.AppLock
 import io.github.aedev.flow.data.contentfilter.aislist.AiListRepository
+import io.github.aedev.flow.data.contentfilter.family.FamilyBlocklistRepository
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilySetup
+import io.github.aedev.flow.data.contentfilter.family.FamilyWhitelistRepository
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SubscriptionRepository
 import io.github.aedev.flow.data.profile.ActiveProfile
@@ -117,6 +121,12 @@ class FlowApplication :
     @Inject
     lateinit var aiList: AiListRepository
 
+    @Inject
+    lateinit var familyWhitelist: FamilyWhitelistRepository
+
+    @Inject
+    lateinit var familyBlocklist: FamilyBlocklistRepository
+
     override fun newImageLoader(context: PlatformContext): ImageLoader = imageLoader
 
     companion object {
@@ -184,6 +194,12 @@ class FlowApplication :
         }
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             FlowNeuroEngine.getInstance(this@FlowApplication).aiListMatcher = aiList::currentMatcher
+            // The family app's always-on filters: the singletons read them from here.
+            FamilyMode.channelMatcher = familyWhitelist::currentMatcher
+            FamilyMode.textMatcher = familyBlocklist::currentMatcher
+            launch {
+                FamilySetup.seedIfNeeded(familyWhitelist, playerPreferences)
+            }
             launch { profileWorkReconciler.reconcile() }
             launch { AutoBackupWorker.keepScheduled(this@FlowApplication) }
             launch { postSwitchWork.runIfSwitched() }
