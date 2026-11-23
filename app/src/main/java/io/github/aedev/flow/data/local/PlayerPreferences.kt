@@ -596,6 +596,7 @@ class PlayerPreferences(
         val APP_LOCK_ENABLED = device(booleanPreferencesKey("app_lock_enabled"))
         val APP_LOCK_DELAY_MINUTES = device(intPreferencesKey("app_lock_delay_minutes"))
         val APP_LOCK_HIDE_IN_RECENTS = device(booleanPreferencesKey("app_lock_hide_in_recents"))
+
         // Family PIN: the sealed SHA-256 of salt:pin, and the salt. See FamilyPinRepository;
         // both names are in BackupExcludedKeys and must stay in sync with it.
         val FAMILY_PIN_HASH = device(stringPreferencesKey("family_pin_hash"))
