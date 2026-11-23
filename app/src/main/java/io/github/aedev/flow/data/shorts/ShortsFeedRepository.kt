@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.aedev.flow.data.contentfilter.aislist.AiListRepository
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilyWhitelistRepository
 import io.github.aedev.flow.data.contentfilter.aislist.AiVerdict
 import io.github.aedev.flow.data.local.CachedHomeVideo
 import io.github.aedev.flow.data.local.HomeFeedCacheFilters
@@ -58,6 +60,7 @@ class ShortsFeedRepository
         private val playerPreferences: PlayerPreferences,
         private val homeFeedCache: HomeFeedCacheRepository,
         private val aiList: AiListRepository,
+        private val familyWhitelist: FamilyWhitelistRepository,
     ) {
         private val lock = Mutex()
         private var pager: ShortsFeedPager? = null
@@ -130,6 +133,10 @@ class ShortsFeedRepository
             title: String,
             channelName: String,
         ): Boolean {
+            // A reel whose channel is not approved leaves the queue once it is named. A reel
+            // with no channel yet passes here; the page filter drops it if it ever names a
+            // non-approved channel, and the player gate drops it on open.
+            if (!familyWhitelist.currentMatcher().allows(channelId, null)) return true
             if (channelId.isNotBlank() && channelId in excludedChannelIds()) return true
             if (aiList.currentMatcher().verdict(channelId, null) == AiVerdict.BLOCK) return true
             return blockedTextMatcher()(title, channelName)
@@ -199,8 +206,10 @@ class ShortsFeedRepository
             object : ShortsFeedContext {
                 override suspend fun profile(): ShortsFeedProfile {
                     val interactions = runCatching { FlowNeuroEngine.getBrainSnapshot().totalInteractions }.getOrDefault(0)
+                    // The SUBSCRIPTIONS lane visits only approved channels: the whitelist is
+                    // the subscription list in the family app, mirrored at seeding time.
                     return ShortsFeedProfile(
-                        subscribedChannelIds = subscriptionRepository.getAllSubscriptionIds(),
+                        subscribedChannelIds = familyWhitelist.currentMatcher().channelIds,
                         isColdStart = interactions < COLD_START_INTERACTIONS,
                     )
                 }
@@ -208,6 +217,7 @@ class ShortsFeedRepository
                 override suspend fun filters(): ShortsFeedFilters {
                     val brain = runCatching { FlowNeuroEngine.getBrainSnapshot() }.getOrNull()
                     val aiMatcher = aiList.currentMatcher()
+                    val familyMatcher = familyWhitelist.currentMatcher()
                     return ShortsFeedFilters(
                         watchedIds = watchedReelIds(),
                         seenIds = runCatching { FlowNeuroEngine.getRecentlySeenShorts() }.getOrDefault(emptySet()),
@@ -215,11 +225,19 @@ class ShortsFeedRepository
                         excludedChannelIds = excludedChannelIds(),
                         isBlockedText = blockedTextMatcher(),
                         isAiBlocked = { channelId -> aiMatcher.verdict(channelId, null) == AiVerdict.BLOCK },
+                        isAllowedChannel = { channelId -> familyMatcher.allows(channelId, null) },
+                        familyMode = FamilyMode.ENABLED,
                     )
                 }
 
                 override suspend fun seedInputs(): List<ShortsSeedInput> {
-                    val history = runCatching { viewHistory.getVideoHistoryFlow().first() }.getOrDefault(emptyList()).filter { it.isShort }
+                    // Seeds come only from approved channels: a chain seeded by another
+                    // channel's reel would fill the RELATED lane with its neighbours.
+                    val familyMatcher = familyWhitelist.currentMatcher()
+                    val history =
+                        runCatching { viewHistory.getVideoHistoryFlow().first() }
+                            .getOrDefault(emptyList())
+                            .filter { it.isShort && familyMatcher.allows(it.channelId, null) }
                     val reelIds = history.mapTo(HashSet()) { it.videoId }
                     val liked =
                         runCatching { likedVideosRepository.getLikedVideosFlow().first() }
@@ -239,6 +257,7 @@ class ShortsFeedRepository
                     val saved =
                         runCatching { playlistRepository.getSavedShortsFlow().first() }
                             .getOrDefault(emptyList())
+                            .filter { familyMatcher.allows(it.channelId, null) }
                             .map { ShortsSeedInput(it.id, it.channelId, ShortsSeedSource.SAVED, it.timestamp) }
                     val watched =
                         history
