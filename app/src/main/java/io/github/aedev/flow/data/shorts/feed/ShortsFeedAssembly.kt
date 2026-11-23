@@ -32,6 +32,7 @@ internal fun assembleShortsPage(
                         short.id !in filters.watchedIds &&
                         short.id !in filters.suppressedIds &&
                         (short.channelId.isBlank() || short.channelId !in filters.excludedChannelIds) &&
+                        filters.isAllowedChannel(short.channelId) &&
                         !filters.isBlockedText(short.title, short.channelName) &&
                         !filters.isAiBlocked(short.channelId)
                 if (!keep) consumed += short.id
