@@ -71,6 +71,24 @@ class FamilyTextMatcher(
     fun blocksQuery(query: String): Boolean = blocksHard(query) || blocksEntertainment(query)
 
     companion object {
+        /**
+         * Leet substitutions. Declared first in this companion object on purpose: [normalize]
+         * reads it, and [DEFAULT]'s construction calls [normalize] — a property initialized
+         * before this map would see it as null and crash class initialization.
+         */
+        private val LEET_FOLD =
+            mapOf(
+                '0' to 'o',
+                '1' to 'i',
+                '3' to 'e',
+                '4' to 'a',
+                '5' to 's',
+                '7' to 't',
+                '8' to 'b',
+                '@' to 'a',
+                '$' to 's',
+            )
+
         /** No words at all; only used where a matcher must exist before the repository loads. */
         val EMPTY = FamilyTextMatcher(emptyList(), emptyList(), emptySet())
 
@@ -107,19 +125,6 @@ class FamilyTextMatcher(
             )
 
         val DEFAULT = FamilyTextMatcher(DEFAULT_HARD_WORDS, DEFAULT_ENTERTAINMENT_WORDS, emptySet())
-
-        private val LEET_FOLD =
-            mapOf(
-                '0' to 'o',
-                '1' to 'i',
-                '3' to 'e',
-                '4' to 'a',
-                '5' to 's',
-                '7' to 't',
-                '8' to 'b',
-                '@' to 'a',
-                '$' to 's',
-            )
 
         /** NFC, lowercase, no Arabic diacritics or tatweel, leet-folded. */
         fun normalize(text: String): String {
@@ -194,3 +199,4 @@ class FamilyTextMatcher(
         }
     }
 }
+
