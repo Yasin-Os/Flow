@@ -182,4 +182,3 @@ class BackupRulesTest {
         dir.deleteRecursively()
     }
 }
-
