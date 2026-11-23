@@ -102,7 +102,7 @@ class WatchRelatedResultsTest {
     fun `a playlist drops its link to the full playlist and keeps its count`() {
         val rows =
             "[" + row(part("Rick Astley", "UCuAXFkgsw1L7xaCfnd5JJOw"), part("Playlist")) +
-            "," + row(part("View full playlist", "VLPLabc")) + "]"
+                "," + row(part("View full playlist", "VLPLabc")) + "]"
 
         val card =
             watch(results = listOf(playlistLockup("PLabc", rows, badge = "25 videos")))
@@ -121,8 +121,10 @@ class WatchRelatedResultsTest {
         val rows = "[" + row(part("Rick Astley")) + "," + row(part("Updated today"), part("Playlist")) + "]"
 
         val card =
-            watch(results = listOf(playlistLockup("PLabc", rows))).watchRelatedResults(hl = "en")
-                .entries.single() as WatchRelatedEntry.PlaylistCard
+            watch(results = listOf(playlistLockup("PLabc", rows)))
+                .watchRelatedResults(hl = "en")
+                .entries
+                .single() as WatchRelatedEntry.PlaylistCard
 
         assertThat(card.labels.badge).isNull()
         assertThat(card.labels.byline).isEqualTo("Rick Astley")
@@ -133,7 +135,9 @@ class WatchRelatedResultsTest {
     fun `a playlist with no metadata rows has no lines to show`() {
         val card =
             watch(results = listOf(playlistLockup("PLabc", "[]", badge = "Mix")))
-                .watchRelatedResults(hl = "en").entries.single() as WatchRelatedEntry.PlaylistCard
+                .watchRelatedResults(hl = "en")
+                .entries
+                .single() as WatchRelatedEntry.PlaylistCard
 
         assertThat(card.labels.badge).isEqualTo("Mix")
         assertThat(card.labels.byline).isNull()
@@ -172,17 +176,18 @@ class WatchRelatedResultsTest {
             badge: String? = null,
         ): String {
             val overlay =
-                badge?.let {
-                    """{"thumbnailOverlayBadgeViewModel":{"thumbnailBadges":[{"thumbnailBadgeViewModel":{"text":"$it"}}]}}"""
-                }.orEmpty()
+                badge
+                    ?.let {
+                        """{"thumbnailOverlayBadgeViewModel":{"thumbnailBadges":[{"thumbnailBadgeViewModel":{"text":"$it"}}]}}"""
+                    }.orEmpty()
             return """
-            {"lockupViewModel":{"contentId":"$id","contentType":"LOCKUP_CONTENT_TYPE_PLAYLIST",
-              "contentImage":{"collectionThumbnailViewModel":{"primaryThumbnail":{"thumbnailViewModel":{
-                "image":{"sources":[{"url":"https://i.ytimg.com/vi/x/hqdefault.jpg","width":336,"height":188}]},
-                "overlays":[$overlay]}}}},
-              "metadata":{"lockupMetadataViewModel":{"title":{"content":"Playlist $id"},
-                "metadata":{"contentMetadataViewModel":{"delimiter":" · ","metadataRows":$rows}}}}}}
-            """.trimIndent()
+                {"lockupViewModel":{"contentId":"$id","contentType":"LOCKUP_CONTENT_TYPE_PLAYLIST",
+                  "contentImage":{"collectionThumbnailViewModel":{"primaryThumbnail":{"thumbnailViewModel":{
+                    "image":{"sources":[{"url":"https://i.ytimg.com/vi/x/hqdefault.jpg","width":336,"height":188}]},
+                    "overlays":[$overlay]}}}},
+                  "metadata":{"lockupMetadataViewModel":{"title":{"content":"Playlist $id"},
+                    "metadata":{"contentMetadataViewModel":{"delimiter":" · ","metadataRows":$rows}}}}}}
+                """.trimIndent()
         }
 
         private fun part(
@@ -225,4 +230,3 @@ class WatchRelatedResultsTest {
         }
     }
 }
-
