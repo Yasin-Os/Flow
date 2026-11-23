@@ -104,8 +104,7 @@ class FamilyPinRepository
             const val PIN_SALT_KEY_NAME = "family_pin_salt"
 
             /** A PIN is 4–6 digits, nothing else. */
-            fun isValidPin(pin: String): Boolean =
-                pin.length in MIN_PIN_LENGTH..MAX_PIN_LENGTH && pin.all { it.isDigit() }
+            fun isValidPin(pin: String): Boolean = pin.length in MIN_PIN_LENGTH..MAX_PIN_LENGTH && pin.all { it.isDigit() }
 
             private val PIN_HASH_KEY = stringPreferencesKey(PIN_HASH_KEY_NAME)
             private val PIN_SALT_KEY = stringPreferencesKey(PIN_SALT_KEY_NAME)
