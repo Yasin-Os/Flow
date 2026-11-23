@@ -22,10 +22,10 @@ env:
   # Certificate of the official Flow release key. IzzyOnDroid and every
   # installed client pin this value; an APK signed with anything else cannot
   # be installed as an update. Changing it forces every user to reinstall.
-  EXPECTED_SIGNER_SHA256: 4322294ed4caa2d4294140095818080ffe8acc1fbe3cdc76107df45c5286be40
+  EXPECTED_SIGNER_SHA256: 4dfb97bab16140efb692627905bf51a74be7b0ba291dadb950596f8d66b71851
   # Certificate of the nightly key. Every nightly must carry it so each one
   # installs over the previous nightly without an uninstall.
-  EXPECTED_NIGHTLY_SIGNER_SHA256: e42225b5ab3ac68236e54567ef0c4878afbafcdd3d438fbaba343e2d70425bf0
+  EXPECTED_NIGHTLY_SIGNER_SHA256: 4dfb97bab16140efb692627905bf51a74be7b0ba291dadb950596f8d66b71851
 
 # checks, tests, lint and build run on separate runners at the same time, and
 # both publish jobs wait for all four. The CI Gradle properties replace the
