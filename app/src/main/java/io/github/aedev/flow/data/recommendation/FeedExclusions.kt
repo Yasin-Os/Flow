@@ -1,6 +1,8 @@
 package io.github.aedev.flow.data.recommendation
 
 import io.github.aedev.flow.data.contentfilter.aislist.AiListMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannelMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
 import io.github.aedev.flow.data.model.Video
 
 /**
@@ -16,6 +18,12 @@ import io.github.aedev.flow.data.model.Video
  *
  * The AI channel list ([ai]) joins [hidesFromRecommendations], so it never reaches Subscriptions.
  * Search, which uses [hides], asks [hidesAsAi] on its own.
+ *
+ * The family whitelist ([family]) joins [hides]: a video whose channel is not approved is hidden
+ * everywhere, Subscriptions included. The family text filter ([familyText]) joins [hidesText] at
+ * the hard tier and [hidesFromRecommendations] at the entertainment tier for non-approved
+ * channels — approved channels are exempt from the entertainment tier, because their own titles
+ * say "Song" and "Music".
  */
 class FeedExclusions(
     val suppressedVideoIds: Set<String> = emptySet(),
@@ -23,11 +31,17 @@ class FeedExclusions(
     val suppressedChannelIds: Set<String> = emptySet(),
     private val blockedText: (title: String, channelName: String) -> Boolean = { _, _ -> false },
     val ai: AiListMatcher = AiListMatcher.NONE,
+    val family: FamilyChannelMatcher = FamilyChannelMatcher.ALLOW_ALL,
+    val familyText: FamilyTextMatcher = FamilyTextMatcher.EMPTY,
 ) {
     val isEmpty: Boolean
-        get() = suppressedVideoIds.isEmpty() && blockedChannelIds.isEmpty() && suppressedChannelIds.isEmpty() && !ai.isActive
+        get() =
+            suppressedVideoIds.isEmpty() && blockedChannelIds.isEmpty() && suppressedChannelIds.isEmpty() &&
+                !ai.isActive && !family.isRestrictive && familyText.isEmpty
 
-    fun hides(video: Video): Boolean = video.id in suppressedVideoIds || hidesChannel(video.channelId)
+    fun hides(video: Video): Boolean =
+        video.id in suppressedVideoIds || hidesChannel(video.channelId) ||
+            !family.allows(video.channelId, video.channelHandle)
 
     fun hidesChannel(channelId: String): Boolean = channelId.isNotBlank() && channelId in blockedChannelIds
 
@@ -37,12 +51,19 @@ class FeedExclusions(
     fun hidesText(
         title: String,
         byline: String,
-    ): Boolean = blockedText(title, byline)
+    ): Boolean = blockedText(title, byline) || familyText.blocksHard("$title\n$byline")
 
     fun hidesFromRecommendations(video: Video): Boolean =
         hides(video) ||
             (video.channelId.isNotBlank() && video.channelId in suppressedChannelIds) ||
             blockedText(video.title, video.channelName) ||
+            familyText.blocks(
+                video.title,
+                video.description,
+                video.channelId,
+                video.channelHandle,
+                family,
+            ) ||
             ai.blocks(video)
 
     /** The same exclusions, also hiding every video from [channelIds]. */
@@ -50,7 +71,7 @@ class FeedExclusions(
         if (channelIds.isEmpty()) {
             this
         } else {
-            FeedExclusions(suppressedVideoIds, blockedChannelIds + channelIds, suppressedChannelIds, blockedText, ai)
+            FeedExclusions(suppressedVideoIds, blockedChannelIds + channelIds, suppressedChannelIds, blockedText, ai, family, familyText)
         }
 
     companion object {
