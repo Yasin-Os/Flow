@@ -118,6 +118,7 @@ internal fun SettingsListScope.homeContent(
         page(SettingsDestination.PLAYBACK)
         page(SettingsDestination.QUALITY)
         page(SettingsDestination.CONTENT)
+        page(SettingsDestination.FAMILY)
         page(SettingsDestination.INTEGRATIONS)
     }
     group(key = "home.data", header = R.string.settings_group_data) {
