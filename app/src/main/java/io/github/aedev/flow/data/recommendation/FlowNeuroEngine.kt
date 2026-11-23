@@ -19,7 +19,9 @@ import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
 import io.github.aedev.flow.data.contentfilter.aislist.AiListMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannelMatcher
 import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.utils.traced
@@ -69,6 +71,10 @@ class FlowNeuroEngine internal constructor(
     private val coWatchStore: NeuroCoWatchStore = NeuroCoWatchStore(appContext),
     learningPaused: (suspend () -> Boolean)? = null,
     private val rankRandom: java.util.Random? = null,
+    // Family gates as providers, so they re-resolve once the repositories load; tests pass
+    // allow-all providers because ranking tests measure ranking, not the family gates.
+    private val familyChannelMatcher: () -> FamilyChannelMatcher = FamilyMode::channelMatcher,
+    private val familyTextMatcher: () -> FamilyTextMatcher = FamilyMode::textMatcher,
 ) {
     constructor(appContext: Context) : this(appContext, NeuroStorage(appContext), NeuroContentStore(appContext))
 
@@ -1898,7 +1904,7 @@ class FlowNeuroEngine internal constructor(
                     tokenizer::keyOf,
                 )
             }
-        val familyText = FamilyMode.textMatcher()
+        val familyText = familyTextMatcher()
         if (matchers.isEmpty() && familyText.isEmpty) return { _, _ -> false }
         return { title, channelName ->
             (!matchers.isEmpty() && NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)) ||
@@ -1922,8 +1928,8 @@ class FlowNeuroEngine internal constructor(
                     NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)
             },
             ai = aiListMatcher(),
-            family = FamilyMode.channelMatcher(),
-            familyText = FamilyMode.textMatcher(),
+            family = familyChannelMatcher(),
+            familyText = familyTextMatcher(),
         )
     }
 
@@ -2149,8 +2155,8 @@ class FlowNeuroEngine internal constructor(
 
             // Pre-filter blocked content
             val aiList = aiListMatcher()
-            val familyChannels = FamilyMode.channelMatcher()
-            val familyText = FamilyMode.textMatcher()
+            val familyChannels = familyChannelMatcher()
+            val familyText = familyTextMatcher()
             val filtered =
                 candidates.filter { video ->
                     if (video.id in activeSuppressedVideos) return@filter false
