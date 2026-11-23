@@ -145,8 +145,7 @@ internal class ShortsFeedPager(
                 .filter {
                     it.id !in usedIds && it.id !in filters.watchedIds && it.id !in filters.suppressedIds &&
                         filters.isAllowedChannel(it.channelId)
-                }
-                .take(pageSize)
+                }.take(pageSize)
                 .also { page -> usedIds += page.map { it.id } }
         }
 
@@ -186,7 +185,8 @@ internal class ShortsFeedPager(
             listOfNotNull(
                 if (!familyMode && short(ShortsFeedLane.RELATED)) async { refillRelated() } else null,
                 if (!familyMode && short(ShortsFeedLane.EXPLORE)) async { refillExplore() } else null,
-                if (!familyMode && short(
+                if (!familyMode &&
+                    short(
                         ShortsFeedLane.DISCOVERY,
                     )
                 ) {
