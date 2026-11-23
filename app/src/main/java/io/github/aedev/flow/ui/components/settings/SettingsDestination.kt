@@ -50,6 +50,7 @@ enum class SettingsDestination(
     NETWORK("network", R.string.settings_network_title),
     WELLBEING("wellbeing", R.string.settings_wellbeing_title),
     SECURITY("security", R.string.settings_security_title),
+    FAMILY("family", R.string.family_settings_title),
     ABOUT("about", R.string.settings_item_about_flow),
     REMOTE_GUIDE("remote_guide", R.string.tv_remote_guide_title, ABOUT),
     DIAGNOSTICS("diagnostics", R.string.settings_item_diagnostics),
