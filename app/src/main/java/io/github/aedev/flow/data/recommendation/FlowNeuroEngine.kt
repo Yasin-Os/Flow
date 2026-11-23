@@ -19,6 +19,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
 import io.github.aedev.flow.data.contentfilter.aislist.AiListMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.utils.traced
@@ -1882,7 +1883,12 @@ class FlowNeuroEngine internal constructor(
                     .keys
         }
 
-    /** The blocked topics as one text test, for feed paths whose reels never pass through [rank]. */
+    /**
+     * The blocked topics as one text test, for feed paths whose reels never pass through [rank].
+     * The family hard tier joins it: it needs no channel, so it applies here too. The
+     * entertainment tier cannot — it needs the channel id to exempt whitelisted channels — and
+     * lives in [feedExclusions] and [rankTraced] instead.
+     */
     suspend fun blockedContentMatcher(): (title: String, channelName: String) -> Boolean {
         val matchers =
             withBrainLock {
@@ -1892,8 +1898,12 @@ class FlowNeuroEngine internal constructor(
                     tokenizer::keyOf,
                 )
             }
-        if (matchers.isEmpty()) return { _, _ -> false }
-        return { title, channelName -> NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf) }
+        val familyText = FamilyMode.textMatcher()
+        if (matchers.isEmpty() && familyText.isEmpty) return { _, _ -> false }
+        return { title, channelName ->
+            (matchers.isNotEmpty() && NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)) ||
+                familyText.blocksHard("$title\n$channelName")
+        }
     }
 
     /** The same suppression windows [rank] applies; the topic matchers are built only if a caller asks. */
@@ -1912,6 +1922,8 @@ class FlowNeuroEngine internal constructor(
                     NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)
             },
             ai = aiListMatcher(),
+            family = FamilyMode.channelMatcher(),
+            familyText = FamilyMode.textMatcher(),
         )
     }
 
@@ -2137,6 +2149,8 @@ class FlowNeuroEngine internal constructor(
 
             // Pre-filter blocked content
             val aiList = aiListMatcher()
+            val familyChannels = FamilyMode.channelMatcher()
+            val familyText = FamilyMode.textMatcher()
             val filtered =
                 candidates.filter { video ->
                     if (video.id in activeSuppressedVideos) return@filter false
@@ -2145,6 +2159,10 @@ class FlowNeuroEngine internal constructor(
                         return@filter false
                     }
                     if (aiList.blocks(video)) return@filter false
+                    if (!familyChannels.allows(video.channelId, video.channelHandle)) return@filter false
+                    if (familyText.blocks(video.title, video.description, video.channelId, video.channelHandle, familyChannels)) {
+                        return@filter false
+                    }
                     !NeuroScoring.isBlockedByText(
                         video.title,
                         video.channelName,
