@@ -71,8 +71,6 @@ class FamilyTextMatcher(
     fun blocksQuery(query: String): Boolean = blocksHard(query) || blocksEntertainment(query)
 
     companion object {
-        val DEFAULT = FamilyTextMatcher(DEFAULT_HARD_WORDS, DEFAULT_ENTERTAINMENT_WORDS, emptySet())
-
         /** No words at all; only used where a matcher must exist before the repository loads. */
         val EMPTY = FamilyTextMatcher(emptyList(), emptyList(), emptySet())
 
@@ -107,6 +105,8 @@ class FamilyTextMatcher(
                 "ڈرامہ", "فلم", "گانا", "ناچ", "موسیقی", "موسيقى",
                 "أغنية", "اغنية", "رقص", "مسلسل", "سينما",
             )
+
+        val DEFAULT = FamilyTextMatcher(DEFAULT_HARD_WORDS, DEFAULT_ENTERTAINMENT_WORDS, emptySet())
 
         private val LEET_FOLD =
             mapOf(
