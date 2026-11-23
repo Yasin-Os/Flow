@@ -55,6 +55,7 @@ internal class HomeFeedLoader(
     private val enricher: HomeChannelEnricher,
     private val wave2: HomeWave2Discovery,
     private val lateMerges: HomeLateMerges,
+    private val familyMode: Boolean = false,
     private val onRefreshFailed: () -> Unit,
 ) {
     private companion object {
@@ -130,8 +131,11 @@ internal class HomeFeedLoader(
                     session.discoveryQueries.clear()
                     session.searchPages.reset()
                     // A refresh restarts the discovery tree at its roots (broad pass);
-                    // load-more regenerations then dig deeper per cluster.
-                    session.discoveryQueries.addAll(FlowNeuroEngine.generateDiscoveryQueries(resetDepth = true))
+                    // load-more regenerations then dig deeper per cluster. The family app
+                    // has no discovery pool: only approved channels' uploads reach the feed.
+                    if (!familyMode) {
+                        session.discoveryQueries.addAll(FlowNeuroEngine.generateDiscoveryQueries(resetDepth = true))
+                    }
                     session.currentQueryIndex = 0
 
                     val userSubs = session.subscriptionScope().boosted
@@ -143,37 +147,46 @@ internal class HomeFeedLoader(
                     val wave1Queries = session.discoveryQueries.take(wave1QueryCount)
                     session.currentQueryIndex = wave1QueryCount
 
+                    // The family app fetches no discovery or related pool: the feed is the
+                    // approved channels' uploads, and the exclusions filter the rest as a net.
                     val results =
-                        traced(TRACE_WAVE1) {
-                            supervisorScope {
-                                val deferredDiscovery =
-                                    async {
-                                        wave1Queries
-                                            .map { query ->
-                                                async {
-                                                    query to
-                                                        runCatching {
-                                                            withTimeoutOrNull(
-                                                                HOME_SEARCH_TIMEOUT_MS,
-                                                            ) { session.searchPages.firstPage(query) }
-                                                        }.getOrNull().orEmpty()
-                                                }
-                                            }.awaitAll()
-                                    }
+                        if (familyMode) {
+                            Wave1FeedResults(
+                                discovery = emptyList(),
+                                related = RelatedGraphFetchResult(emptyList(), emptyList(), emptyList(), emptyMap()),
+                            )
+                        } else {
+                            traced(TRACE_WAVE1) {
+                                supervisorScope {
+                                    val deferredDiscovery =
+                                        async {
+                                            wave1Queries
+                                                .map { query ->
+                                                    async {
+                                                        query to
+                                                            runCatching {
+                                                                withTimeoutOrNull(
+                                                                    HOME_SEARCH_TIMEOUT_MS,
+                                                                ) { session.searchPages.firstPage(query) }
+                                                            }.getOrNull().orEmpty()
+                                                    }
+                                                }.awaitAll()
+                                        }
 
-                                // ── Related-graph lane: harvest /next neighbours of recent positives ──
-                                val deferredRelated =
-                                    async {
-                                        val seedInputs = feedSources.historySeedInputs()
-                                        val longTermInputs = feedSources.longTermSeedInputs()
-                                        val seedIds = FlowNeuroEngine.selectRelatedSeeds(seedInputs, MAX_RELATED_SEEDS, longTermInputs)
-                                        feedSources.fetchRelatedGraph(seedInputs + longTermInputs, seedIds, session::cacheFilters)
-                                    }
+                                    // ── Related-graph lane: harvest /next neighbours of recent positives ──
+                                    val deferredRelated =
+                                        async {
+                                            val seedInputs = feedSources.historySeedInputs()
+                                            val longTermInputs = feedSources.longTermSeedInputs()
+                                            val seedIds = FlowNeuroEngine.selectRelatedSeeds(seedInputs, MAX_RELATED_SEEDS, longTermInputs)
+                                            feedSources.fetchRelatedGraph(seedInputs + longTermInputs, seedIds, session::cacheFilters)
+                                        }
 
-                                Wave1FeedResults(
-                                    discovery = deferredDiscovery.await(),
-                                    related = deferredRelated.await(),
-                                )
+                                    Wave1FeedResults(
+                                        discovery = deferredDiscovery.await(),
+                                        related = deferredRelated.await(),
+                                    )
+                                }
                             }
                         }
 
@@ -234,16 +247,26 @@ internal class HomeFeedLoader(
                     val watched = session.watchedVideoIds.value
                     // Cached uploads only: the network refresh runs after first paint.
                     val rawMemory = runCatching { channelMemory.storedUploads(now) }.getOrDefault(emptyList())
+                    // No neighbour channels in the family app: only approved channels appear.
                     val neighbours =
-                        runCatching {
-                            val followed =
-                                subscriptionRepository.getAllSubscriptions().first().associate {
-                                    it.channelId to
-                                        it.channelName
-                                }
-                            neighbourChannels.neighbours(followed, now)
-                        }.getOrDefault(emptyList())
-                    val rawNeighbours = runCatching { neighbourChannels.storedUploads(neighbours, now) }.getOrDefault(emptyList())
+                        if (familyMode) {
+                            emptyList()
+                        } else {
+                            runCatching {
+                                val followed =
+                                    subscriptionRepository.getAllSubscriptions().first().associate {
+                                        it.channelId to
+                                            it.channelName
+                                    }
+                                neighbourChannels.neighbours(followed, now)
+                            }.getOrDefault(emptyList())
+                        }
+                    val rawNeighbours =
+                        if (familyMode) {
+                            emptyList()
+                        } else {
+                            runCatching { neighbourChannels.storedUploads(neighbours, now) }.getOrDefault(emptyList())
+                        }
                     val trace = if (snapshotRecorder.isRecording()) RankTrace() else null
                     session.snapshotTrace = trace
                     if (trace == null) snapshotFeedJob?.cancel()
@@ -398,11 +421,17 @@ internal class HomeFeedLoader(
                     // Enrich (post-paint) with related neighbours of saved/watched videos.
                     lateMerges.enrichFeedWithSavedInterest(userSubs, taste)
 
-                    wave2.startWave2Discovery(finalMix, userSubs, taste)
+                    // No second discovery wave and no neighbour refresh in the family app:
+                    // there is no discovery pool to deepen and no neighbour channel to follow.
+                    if (!familyMode) {
+                        wave2.startWave2Discovery(finalMix, userSubs, taste)
+                    }
                     lateMerges.startSubscriptionTopUp(userSubs, storedFeed)
                     lateMerges.startChannelMemoryRefresh(userSubs)
-                    val offTopicNeighbours = rawNeighbours.map { it.channelId }.toSet() - lanes.relevantNeighbourChannels
-                    lateMerges.startNeighbourRefresh(neighbours, offTopicNeighbours, storedFeed, userSubs)
+                    if (!familyMode) {
+                        val offTopicNeighbours = rawNeighbours.map { it.channelId }.toSet() - lanes.relevantNeighbourChannels
+                        lateMerges.startNeighbourRefresh(neighbours, offTopicNeighbours, storedFeed, userSubs)
+                    }
                     chipFeeds.refreshChips()
                 } catch (cancellation: CancellationException) {
                     throw cancellation
