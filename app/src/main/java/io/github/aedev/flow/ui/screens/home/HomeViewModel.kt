@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilyWhitelistRepository
 import io.github.aedev.flow.data.engagement.FeedInvalidationBus
 import io.github.aedev.flow.data.feed.FeedPrefetchQueue
 import io.github.aedev.flow.data.local.HomeFeedCacheRepository
@@ -45,6 +47,7 @@ class HomeViewModel
     constructor(
         private val repository: YouTubeRepository,
         private val subscriptionRepository: SubscriptionRepository,
+        private val familyWhitelist: FamilyWhitelistRepository,
         private val subscriptionFeedRepository: io.github.aedev.flow.data.subscriptions.SubscriptionFeedRepository,
         private val shortsRepository: ShortsFeedRepository,
         private val playerPreferences: io.github.aedev.flow.data.local.PlayerPreferences,
@@ -75,6 +78,7 @@ class HomeViewModel
                 subscriptionRepository = subscriptionRepository,
                 playerPreferences = playerPreferences,
                 searchPages = HomeSearchPages({ query, continuation -> repository.searchVideoPage(query, continuation) }),
+                familyWhitelist = familyWhitelist,
             )
 
         private val _uiState = session.uiState
@@ -132,6 +136,7 @@ class HomeViewModel
                 enricher = enricher,
                 wave2 = wave2Discovery,
                 lateMerges = lateMerges,
+                familyMode = FamilyMode.ENABLED,
                 onRefreshFailed = { refreshFailureEvents.trySend(Unit) },
             )
 
