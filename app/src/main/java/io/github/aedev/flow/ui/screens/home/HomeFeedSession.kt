@@ -1,5 +1,6 @@
 package io.github.aedev.flow.ui.screens.home
 
+import io.github.aedev.flow.data.contentfilter.family.FamilyWhitelistRepository
 import io.github.aedev.flow.data.local.HomeFeedCacheFilters
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SubscriptionRepository
@@ -22,6 +23,7 @@ internal class HomeFeedSession(
     private val subscriptionRepository: SubscriptionRepository,
     private val playerPreferences: PlayerPreferences,
     val searchPages: HomeSearchPages,
+    private val familyWhitelist: FamilyWhitelistRepository? = null,
 ) {
     val uiState = MutableStateFlow(HomeUiState())
     val watchedVideoIds = MutableStateFlow<Set<String>>(emptySet())
@@ -51,11 +53,18 @@ internal class HomeFeedSession(
     @Volatile
     var cachedOnScreenIds: Set<String>? = null
 
-    suspend fun subscriptionScope(): HomeSubscriptionScope =
-        HomeSubscriptionScope.of(
+    suspend fun subscriptionScope(): HomeSubscriptionScope {
+        val whitelistIds = familyWhitelist?.whitelistChannelIds()
+        if (whitelistIds != null) {
+            // The family app shows only approved channels, always: the "show subscriptions on
+            // home" preference cannot empty the feed here, and nothing is hidden from it.
+            return HomeSubscriptionScope(boosted = whitelistIds, hidden = emptySet())
+        }
+        return HomeSubscriptionScope.of(
             subscriptions = subscriptionRepository.getAllSubscriptionIds(),
             showOnHome = playerPreferences.homeSubscriptionsEnabled.first(),
         )
+    }
 
     suspend fun feedExclusions(): FeedExclusions =
         runCatching { FlowNeuroEngine.feedExclusions() }
