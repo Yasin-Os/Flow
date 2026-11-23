@@ -2,7 +2,7 @@ name: Android CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, family-youtube ]
     tags:
       - 'v*'
   pull_request:
@@ -261,6 +261,17 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
 
+      # Family YouTube fork: a debug APK for side-load testing, built only on
+      # the family-youtube branch. The debug build type sets no signingConfig
+      # (app/build.gradle.kts), so AGP signs it with its default debug key
+      # and it needs no release/nightly keystore or secrets. It does not
+      # touch the nightly/release paths below.
+      - name: Build family debug APK
+        if: ${{ github.ref == 'refs/heads/family-youtube' }}
+        run: >
+          ./gradlew :app:assembleGithubDebug
+          --build-cache --stacktrace
+
       # Guards the IzzyOnDroid/F-Droid update path: a wrong or missing key here
       # is unrecoverable for installed users, so fail the build rather than
       # publish. Skipped when no keystore was available, e.g. on fork PRs.
@@ -431,6 +442,16 @@ jobs:
           path: dist-nightly/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload family debug APK
+        if: ${{ github.ref == 'refs/heads/family-youtube' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: flow-family-youtube-debug-apk
+          path: app/build/outputs/apk/github/debug/app-github-universal-debug*.apk
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Upload FOSS universal APK
         uses: actions/upload-artifact@v7
