@@ -1901,7 +1901,7 @@ class FlowNeuroEngine internal constructor(
         val familyText = FamilyMode.textMatcher()
         if (matchers.isEmpty() && familyText.isEmpty) return { _, _ -> false }
         return { title, channelName ->
-            (matchers.isNotEmpty() && NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)) ||
+            (!matchers.isEmpty() && NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)) ||
                 familyText.blocksHard("$title\n$channelName")
         }
     }
