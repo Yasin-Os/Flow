@@ -73,8 +73,8 @@ class FlowNeuroEngine internal constructor(
     private val rankRandom: java.util.Random? = null,
     // Family gates as providers, so they re-resolve once the repositories load; tests pass
     // allow-all providers because ranking tests measure ranking, not the family gates.
-    private val familyChannelMatcher: () -> FamilyChannelMatcher = FamilyMode::channelMatcher,
-    private val familyTextMatcher: () -> FamilyTextMatcher = FamilyMode::textMatcher,
+    private val familyChannelMatcher: () -> FamilyChannelMatcher = { FamilyMode.channelMatcher() },
+    private val familyTextMatcher: () -> FamilyTextMatcher = { FamilyMode.textMatcher() },
 ) {
     constructor(appContext: Context) : this(appContext, NeuroStorage(appContext), NeuroContentStore(appContext))
 
