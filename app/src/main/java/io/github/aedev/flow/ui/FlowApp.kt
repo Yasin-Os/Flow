@@ -25,6 +25,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import io.github.aedev.flow.MainActivity
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.NavBarLook
 import io.github.aedev.flow.data.local.NavBarScroll
 import io.github.aedev.flow.data.local.NavBarStyle
@@ -136,12 +137,15 @@ fun FlowApp(
     val sleepTimerCloseAppOnExpiry by preferences.sleepTimerCloseAppOnExpiry.collectAsState(
         initial = SleepTimerManager.preferredCloseAppOnExpiry,
     )
+    // The family app has no Music tab and no main search: the Music tab would open the
+    // music home, and search would open the open web of videos. Both stay off even if their
+    // preferences are on; the family Settings area has its own channels-only search.
     val navigationVisibility =
         NavigationVisibility(
             home = isHomeNavigationEnabled,
             shorts = isShortsNavigationEnabled,
-            music = isMusicNavigationEnabled,
-            search = isSearchNavigationEnabled,
+            music = isMusicNavigationEnabled && !FamilyMode.ENABLED,
+            search = isSearchNavigationEnabled && !FamilyMode.ENABLED,
             categories = isCategoriesNavigationEnabled,
             downloads = isDownloadsNavigationEnabled,
         )
