@@ -57,7 +57,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.github.aedev.flow"
+        applicationId = "com.yasin.familyyoutube"
         minSdk = 26
         targetSdk = 36
         versionCode = 20
@@ -101,7 +101,9 @@ android {
         create("github") {
             dimension = "version"
             isDefault = true
-            buildConfigField("Boolean", "UPDATER_ENABLED", "true")
+            // Family fork: updater disabled so the app never self-updates to upstream
+            // Flow releases, which would silently drop the family filters.
+            buildConfigField("Boolean", "UPDATER_ENABLED", "false")
             buildConfigField("String", "DISCORD_APPLICATION_ID", "\"1526515771021328514\"")
         }
         create("foss") {
