@@ -95,6 +95,7 @@ internal object DestinationIndex {
             SettingsDestination.NETWORK -> R.string.settings_network_summary
             SettingsDestination.WELLBEING -> R.string.settings_wellbeing_summary
             SettingsDestination.SECURITY -> R.string.settings_security_summary
+            SettingsDestination.FAMILY -> R.string.family_settings_summary
             SettingsDestination.WIDGETS -> R.string.settings_widgets_summary
             SettingsDestination.ABOUT -> R.string.settings_about_summary
             SettingsDestination.DIAGNOSTICS -> R.string.settings_item_diagnostics_subtitle
