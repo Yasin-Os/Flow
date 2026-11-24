@@ -110,6 +110,17 @@ val TITLE_REGEXES =
         Regex("""(?i)\b(natok|drama|serial)\b.*\b(ep|episode)\s*\.?\s*\d+"""),
     )
 
+// The vice roots that live only in the short-root title regexes (indices 0–1):
+// they are not vice words, so the exemption must check them separately. The
+// boundaries are the regexes' own explicit ones — bare "মদ" cannot join the
+// vice word list, because the whole-word boundary allows a following combining
+// mark and would match "মদিনা".
+val VICE_ROOT_PATTERN =
+    Regex(
+        """(?i)(?:^|[\s|,.\-\[\]()/#!?।؟])(beer|wine|rum|gin|pub|weed|daru|jua|satta""" +
+            """|মদ|جوا|بيرة|خمر)(?:$|[\s|,.\-\[\]()/#!?।؟])""",
+    )
+
 // Blocked Title Emojis (microphone U+1F3A4 intentionally excluded).
 val BLOCKED_EMOJIS =
     setOf(
