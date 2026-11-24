@@ -74,6 +74,12 @@ class FamilyTextMatcherTest {
     }
 
     @Test
+    fun `an empty matcher reports empty`() {
+        assertThat(FamilyTextMatcher.EMPTY.isEmpty).isTrue()
+        assertThat(FamilyTextMatcher.DEFAULT.isEmpty).isFalse()
+    }
+
+    @Test
     fun `madina does not match mad`() {
         assertThat(text.blocksEntertainment("মদিনা")).isFalse()
         assertThat(text.blocksEntertainment("মদীনা")).isFalse()
