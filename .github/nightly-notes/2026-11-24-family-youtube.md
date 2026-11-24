@@ -17,3 +17,5 @@
 ## Fixed
 - Home no longer opens to a black screen on the very first launch
 - A channel that could not be loaded has been removed from the list
+- Fixed a crash that stopped the search filter from starting
+- Lectures about haram topics (alcohol, gambling) are no longer hidden by mistake
