@@ -74,6 +74,7 @@ class FamilyBlocklistRepository
                             FamilyTextMatcher.DEFAULT_HARD_WORDS,
                             FamilyTextMatcher.DEFAULT_ENTERTAINMENT_WORDS,
                             words,
+                            FamilyTextMatcher.DEFAULT_VICE_WORDS,
                         )
                 }
             }
@@ -104,6 +105,7 @@ class FamilyBlocklistRepository
                     FamilyTextMatcher.DEFAULT_HARD_WORDS,
                     FamilyTextMatcher.DEFAULT_ENTERTAINMENT_WORDS,
                     words,
+                    FamilyTextMatcher.DEFAULT_VICE_WORDS,
                 )
         }
 
