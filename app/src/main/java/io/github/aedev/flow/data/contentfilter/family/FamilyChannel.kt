@@ -5,8 +5,10 @@ import kotlinx.serialization.Serializable
 
 /**
  * One approved channel. The `UC…` id is the match key wherever YouTube supplies one; the handle
- * is the fallback for channels whose id has not been resolved yet (see [FAMILY_SEED_CHANNELS]).
- * A handle-only entry still matches its videos once the id is resolved at runtime.
+ * is the fallback for channels whose id has not been resolved yet. A blank handle means no
+ * handle could be confirmed for the channel — the id alone is the match key. The shipped list
+ * lives in [FAMILY_SEED_CHANNELS] (FamilySeedChannels.kt); the full list with categories, and
+ * the channels deliberately left out and why, is in `docs/family-whitelist.md`.
  */
 @Serializable
 data class FamilyChannel(
@@ -14,24 +16,6 @@ data class FamilyChannel(
     val handle: String,
     val name: String,
 )
-
-/**
- * The seven channels the family app ships with. Three ids were verified against YouTube channel
- * pages; the other four ship handle-only and are resolved to `UC…` ids at startup
- * ([FamilyWhitelistRepository.resolveMissingIds]) — never invent an id for them.
- *
- * Rajiya Risha and MercifulServant are deliberately NOT here; they were held back.
- */
-val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
-    listOf(
-        FamilyChannel(channelId = "UCUNkaUjhRArzU4Tm_TPSDlg", handle = "@holytunebdofficial", name = "Holy Tune"),
-        FamilyChannel(handle = "@arafahrecord", name = "Arafah Records"),
-        FamilyChannel(channelId = "UCxStLx7yb96MGBfIMo20x7Q", handle = "@drmizanurrahmanazharichannel", name = "Mizanur Rahman Azhari"),
-        FamilyChannel(handle = "@sheikhahmadullahofficial", name = "Ahmadullah"),
-        FamilyChannel(handle = "@alafasy", name = "Alafasy"),
-        FamilyChannel(handle = "@islam_sobhi", name = "Islam Sobhi"),
-        FamilyChannel(channelId = "UCL8fnPgqDPPBbUphwdv99og", handle = "@sheikhsaadalghamdi", name = "Saad Al Ghamdi"),
-    )
 
 /**
  * A lookup over the whitelist: an id match, or a normalized handle match. Videos that carry
