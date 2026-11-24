@@ -9,6 +9,11 @@ package io.github.aedev.flow.data.recommendation
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.data.contentfilter.aislist.AiListMatcher
 import io.github.aedev.flow.data.contentfilter.aislist.AiListSets
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannel
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannelMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilySearchRule
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
+import io.github.aedev.flow.data.model.Channel
 import io.github.aedev.flow.data.model.Video
 import org.junit.Test
 
@@ -91,6 +96,70 @@ class FeedExclusionsTest {
         assertThat(exclusions.hides(listed)).isFalse()
         assertThat(exclusions.isEmpty).isFalse()
         assertThat(exclusions.hidingChannels(setOf("UCsub")).hidesAsAi(listed)).isTrue()
+    }
+
+    @Test
+    fun `hidesFromSearch keeps a waz video and drops a music video`() {
+        val exclusions = familyExclusions()
+
+        assertThat(exclusions.hidesFromSearch(video("v1", "UCunknown", title = "নতুন ওয়াজ মাহফিল"))).isFalse()
+        assertThat(exclusions.hidesFromSearch(video("v2", "UCunknown", title = "Top Songs 2024"))).isTrue()
+        assertThat(exclusions.hidesFromSearch(video("v3", "UCghazal", title = "Bangla Islamic Song"))).isFalse()
+    }
+
+    @Test
+    fun `hidesFromSearch still hides a video the viewer marked not interested`() {
+        val channels =
+            FamilyChannelMatcher.of(
+                listOf(
+                    FamilyChannel(channelId = "UCghazal", handle = "@holytune", name = "Holy Tune"),
+                ),
+            )
+        val exclusions =
+            FeedExclusions(
+                suppressedVideoIds = setOf("v1"),
+                family = channels,
+                familyText = FamilyTextMatcher.DEFAULT,
+                familySearch = FamilySearchRule(channels, FamilyTextMatcher.DEFAULT),
+            )
+
+        assertThat(exclusions.hidesFromSearch(video("v1", "UCunknown", title = "নতুন ওয়াজ মাহফিল"))).isTrue()
+    }
+
+    @Test
+    fun `hidesChannelFromSearch keeps a topic channel and drops the rest`() {
+        val exclusions = familyExclusions()
+
+        assertThat(
+            exclusions.hidesChannelFromSearch(
+                Channel(id = "UCunknown", name = "Holy Tune", thumbnailUrl = "", subscriberCount = 0L),
+            ),
+        ).isFalse()
+        assertThat(
+            exclusions.hidesChannelFromSearch(
+                Channel(id = "UCother", name = "Random Vlogs", thumbnailUrl = "", subscriberCount = 0L),
+            ),
+        ).isTrue()
+    }
+
+    @Test
+    fun `a family search rule makes the exclusions non empty`() {
+        assertThat(familyExclusions().isEmpty).isFalse()
+        assertThat(FeedExclusions().isEmpty).isTrue()
+    }
+
+    private fun familyExclusions(): FeedExclusions {
+        val channels =
+            FamilyChannelMatcher.of(
+                listOf(
+                    FamilyChannel(channelId = "UCghazal", handle = "@holytune", name = "Holy Tune"),
+                ),
+            )
+        return FeedExclusions(
+            family = channels,
+            familyText = FamilyTextMatcher.DEFAULT,
+            familySearch = FamilySearchRule(channels, FamilyTextMatcher.DEFAULT),
+        )
     }
 
     private fun aiList(blockedId: String) =
