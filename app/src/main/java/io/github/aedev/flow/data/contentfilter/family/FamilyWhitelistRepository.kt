@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.aedev.flow.data.local.ChannelSubscription
@@ -89,18 +90,49 @@ class FamilyWhitelistRepository
         suspend fun whitelistChannelIds(): Set<String> = currentMatcher().channelIds
 
         /**
-         * Seeds the seven approved channels on first launch and mirrors the resolvable ones into
-         * subscriptions, then resolves any handle-only entries to `UC…` ids in the background of
-         * the caller's coroutine. A failed resolution (offline, renamed handle) keeps the handle
-         * entry, which still matches by handle; the next launch retries.
+         * Seeds the approved channels on first launch and mirrors them into subscriptions,
+         * then merges in any seed channels added by a later round (tracked by [SEED_VERSION])
+         * so an existing install gains the new channels too. A channel the PIN holder removed
+         * is never re-added: the merge runs once per seed version, and it skips channels with
+         * an unsubscribe tombstone. A failed resolution (offline, renamed handle) keeps the
+         * handle entry, which still matches by handle; the next launch retries.
          */
         suspend fun ensureSeeded() {
             val current = channels.first()
             if (current.isEmpty()) {
                 save(FAMILY_SEED_CHANNELS)
                 mirrorSubscriptions(FAMILY_SEED_CHANNELS)
+                setSeedVersion(SEED_VERSION)
+            } else {
+                mergeSeedUpdates(current)
             }
             resolveMissingIds()
+        }
+
+        /** Adds seed channels missing from the stored list, once per [SEED_VERSION]. */
+        private suspend fun mergeSeedUpdates(current: List<FamilyChannel>) {
+            if (seedVersion() >= SEED_VERSION) return
+            val removedIds = runCatching { subscriptionRepository.unsubscribedTombstones().keys }.getOrDefault(emptySet())
+            val missing =
+                FAMILY_SEED_CHANNELS.filterNot { seed ->
+                    seed.channelId.isNotBlank() && seed.channelId in removedIds ||
+                        current.any { existing ->
+                            (seed.channelId.isNotBlank() && existing.channelId == seed.channelId) ||
+                                (seed.handle.isNotBlank() && existing.handle.equals(seed.handle, ignoreCase = true))
+                        }
+                }
+            if (missing.isNotEmpty()) {
+                save(current + missing)
+                mirrorSubscriptions(missing)
+            }
+            setSeedVersion(SEED_VERSION)
+        }
+
+        private suspend fun seedVersion(): Int =
+            context.familyWhitelistDataStore.data.first()[SEED_VERSION_KEY] ?: 0
+
+        private suspend fun setSeedVersion(version: Int) {
+            context.familyWhitelistDataStore.edit { preferences -> preferences[SEED_VERSION_KEY] = version }
         }
 
         suspend fun add(channel: FamilyChannel) {
@@ -160,21 +192,24 @@ class FamilyWhitelistRepository
         }
 
         private suspend fun mirrorSubscriptions(channels: List<FamilyChannel>) {
-            channels.filter { it.channelId.isNotBlank() }.forEach { channel ->
-                runCatching {
-                    subscriptionRepository.subscribe(
-                        ChannelSubscription(
-                            channelId = channel.channelId,
-                            channelName = channel.name,
-                            channelThumbnail = "",
-                        ),
+            val subscriptions =
+                channels.filter { it.channelId.isNotBlank() }.map { channel ->
+                    ChannelSubscription(
+                        channelId = channel.channelId,
+                        channelName = channel.name,
+                        channelThumbnail = "",
                     )
-                }.onFailure { Log.w(TAG, "Could not mirror ${channel.handle} into subscriptions", it) }
-            }
+                }
+            if (subscriptions.isEmpty()) return
+            runCatching { subscriptionRepository.subscribeAll(subscriptions) }
+                .onFailure { Log.w(TAG, "Could not mirror ${subscriptions.size} channels into subscriptions", it) }
         }
 
         private companion object {
             const val TAG = "FamilyWhitelist"
             val CHANNELS_KEY = stringPreferencesKey("channels")
+            val SEED_VERSION_KEY = intPreferencesKey("seed_version")
+            /** Bump when [FAMILY_SEED_CHANNELS] gains channels: existing installs merge them in once. */
+            const val SEED_VERSION = 2
         }
     }
