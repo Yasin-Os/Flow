@@ -26,6 +26,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.session.MediaSession
 import dagger.hilt.android.EntryPointAccessors
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SponsorBlockAction
 import io.github.aedev.flow.data.localmedia.LocalMediaIds
@@ -2518,7 +2519,8 @@ class EnhancedPlayerManager private constructor() {
             thumbnail = data.enrichedVideo.thumbnailUrl,
         )
         setAutoplayCandidates(data.enrichedVideo.id, emptyList(), autoplayEnabled)
-        loadAutoplayCandidates(data.enrichedVideo.id)
+        // The family app has no recommendations: autoplay never pulls related videos.
+        if (!FamilyMode.ENABLED) loadAutoplayCandidates(data.enrichedVideo.id)
 
         val isAutoMode = data.videoStream == null
         _playerState.value =
