@@ -165,7 +165,8 @@ class HomeViewModel
         /** The chips above the feed and what the selected one shows; All alone hides the row while chips are off. */
         internal val chips: StateFlow<HomeChipsState> =
             combine(chipFeeds.state, playerPreferences.homeChipsEnabled) { state, enabled ->
-                if (enabled) state else HomeChipsState(chips = listOf(HomeChip.All))
+                // No recommendation chips in the family app: the chip row stays hidden.
+                if (enabled && !FamilyMode.ENABLED) state else HomeChipsState(chips = listOf(HomeChip.All))
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(UI_STATE_SUBSCRIPTION_TIMEOUT_MS), chipFeeds.state.value)
 
         internal val newVideosButtonEnabled: StateFlow<Boolean> =
