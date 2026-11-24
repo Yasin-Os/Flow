@@ -173,6 +173,10 @@ internal fun SearchResultsPage.toShortsResults(shortsEnabled: Boolean): List<Sea
  * on; a channel result stays, and only teaches the list which handle its id has.
  *
  * Community posts carry no channel id in the response, so a blocked creator's post survives here.
+ *
+ * In the family app the whitelist joins too: only approved channels' videos and cards survive,
+ * playlists (which carry no channel id) go, and a strip keeps only approved videos — a query
+ * with no approved match ends on the empty state, never on outside results.
  */
 internal fun List<SearchResultItem>.withoutHidden(exclusions: FeedExclusions): List<SearchResultItem> {
     if (exclusions.isEmpty) return this
@@ -180,23 +184,31 @@ internal fun List<SearchResultItem>.withoutHidden(exclusions: FeedExclusions): L
     return mapNotNull { item ->
         when (item) {
             is SearchResultItem.VideoResult -> {
-                item.takeUnless { exclusions.hides(it.video) || exclusions.hidesAsAi(it.video) }
+                item.takeUnless {
+                    exclusions.hides(it.video) || exclusions.hidesAsAi(it.video) ||
+                        (exclusions.family.isRestrictive && it.video.channelId.isBlank())
+                }
             }
 
             is SearchResultItem.ChannelResult -> {
                 exclusions.ai.learn(item.channel.id, item.channel.handle)
-                item.takeUnless { exclusions.hidesChannel(it.channel.id) }
+                item.takeUnless {
+                    exclusions.hidesChannel(it.channel.id) ||
+                        (exclusions.family.isRestrictive && !exclusions.family.allows(it.channel.id, it.channel.handle))
+                }
             }
 
             is SearchResultItem.PlaylistResult -> {
-                item
+                // A playlist carries no channel id, so it cannot be attributed to an approved
+                // channel; the family app drops it rather than guessing.
+                if (exclusions.family.isRestrictive) null else item
             }
 
             is SearchResultItem.ShelfResult -> {
                 val videos = item.videos.filterNot { exclusions.hides(it) || exclusions.hidesAsAi(it) }
                 when {
                     videos.isNotEmpty() -> item.copy(videos = videos)
-                    item.posts.isNotEmpty() -> item
+                    item.posts.isNotEmpty() && !exclusions.family.isRestrictive -> item
                     else -> null
                 }
             }
