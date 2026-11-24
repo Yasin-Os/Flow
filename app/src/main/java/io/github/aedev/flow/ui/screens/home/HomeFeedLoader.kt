@@ -288,10 +288,27 @@ internal class HomeFeedLoader(
                             // The family feed is newest first: no Neuro ranking, so no
                             // recommendation work runs at all in family mode.
                             rank = { pool ->
-                                if (familyMode) pool.sortedByDescending { it.timestamp } else FlowNeuroEngine.rank(pool, userSubs, trace = trace)
+                                if (familyMode) {
+                                    pool.sortedByDescending { it.timestamp }
+                                } else {
+                                    FlowNeuroEngine.rank(
+                                        pool,
+                                        userSubs,
+                                        trace = trace,
+                                    )
+                                }
                             },
                             rankRelevant = { pool ->
-                                if (familyMode) pool.sortedByDescending { it.timestamp } else FlowNeuroEngine.rank(pool, userSubs, NeuroScoring.LANE_RELEVANCE_FLOOR, trace)
+                                if (familyMode) {
+                                    pool.sortedByDescending { it.timestamp }
+                                } else {
+                                    FlowNeuroEngine.rank(
+                                        pool,
+                                        userSubs,
+                                        NeuroScoring.LANE_RELEVANCE_FLOOR,
+                                        trace,
+                                    )
+                                }
                             },
                             share = FlowNeuroEngine::shareByInterest,
                             rawNeighbours = rawNeighbours,
