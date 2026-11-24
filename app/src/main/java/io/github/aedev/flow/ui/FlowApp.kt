@@ -186,7 +186,10 @@ fun FlowApp(
         PendingSlice.await()
         LinkedCatchUp.await()
         DeepFlowManager.initialize(context)
-        val bypass = activity?.intent?.getBooleanExtra(MainActivity.EXTRA_BENCHMARK_BYPASS_ONBOARDING, false) == true
+        // Family mode has no onboarding: the app opens straight onto the approved home feed.
+        val bypass =
+            FamilyMode.ENABLED ||
+                activity?.intent?.getBooleanExtra(MainActivity.EXTRA_BENCHMARK_BYPASS_ONBOARDING, false) == true
         // A viewer who is past onboarding never waits for the engine here; everyone else asks it (#1301).
         needsOnboarding =
             when {
