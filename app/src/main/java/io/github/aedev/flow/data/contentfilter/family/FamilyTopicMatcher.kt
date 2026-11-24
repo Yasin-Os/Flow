@@ -39,8 +39,12 @@ class FamilyTopicMatcher {
     fun matchesTopic(text: String): Boolean = matchTopic(text) != null
 
     companion object {
-        val DEFAULT = FamilyTopicMatcher()
-
+        /**
+         * Declared first in this companion object on purpose: [DEFAULT]'s
+         * construction calls the primary constructor, which reads this map — a
+         * property initialized after [DEFAULT] would still be null and crash
+         * class initialization with an NPE.
+         */
         private val TOPIC_TERMS: Map<FamilyTopic, Set<String>> =
             mapOf(
                 FamilyTopic.WAZ to (WAZ_EN + WAZ_BN + WAZ_AR + WAZ_UR + WAZ_HI_UR_TRANSLIT),
@@ -67,6 +71,8 @@ class FamilyTopicMatcher {
                             ISLAMIC_GENERAL_UR + ISLAMIC_GENERAL_HI_UR_TRANSLIT
                     ),
             )
+
+        val DEFAULT = FamilyTopicMatcher()
     }
 }
 
