@@ -3028,11 +3028,11 @@ class FlowNeuroEngine internal constructor(
      * Records explicit topic evidence and plants the query's phrase-level topics
      * (see NeuroSearchLearning) without counting as a full interaction.
      *
-     * In family mode this is a no-op: ranking is skipped, so learning the query would only
-     * feed a profile nothing reads.
+     * This stays on in family mode: ranking is skipped there, so the learned
+     * profile is never read for recommendations, and the guard on video
+     * learning is what keeps non-whitelisted videos out of the profile.
      */
     suspend fun onSearchQuery(rawQuery: String) {
-        if (FamilyMode.ENABLED) return
         if (rawQuery.isBlank() || isLearningPaused()) return
         withBrainLock {
             val learned =
