@@ -7,7 +7,8 @@ import io.github.aedev.flow.data.local.PlayerPreferences
  * First-launch family setup, run from [io.github.aedev.flow.FlowApplication] on an IO coroutine.
  * Seeds the approved channels (and mirrors them into subscriptions, so the home feed has
  * uploads to show) and turns off the navigation the family app does not have: the Music tab
- * and the home Shorts shelf. The Search tab already defaults off. The [FamilyMode] matcher
+ * and the home Shorts shelf. The Search tab stays on: search is whitelist-scoped, so it can
+ * only ever return approved channels and their videos. The [FamilyMode] matcher
  * providers are wired separately in `FlowApplication.onCreate`, next to the AiSList wiring.
  */
 object FamilySetup {
@@ -21,7 +22,7 @@ object FamilySetup {
             .onFailure { Log.w(TAG, "Family whitelist seeding failed", it) }
         runCatching {
             playerPreferences.setMusicNavigationEnabled(false)
-            playerPreferences.setSearchNavigationEnabled(false)
+            playerPreferences.setSearchNavigationEnabled(true)
             playerPreferences.setHomeShortsShelfEnabled(false)
         }.onFailure { Log.w(TAG, "Family navigation prefs failed", it) }
     }
