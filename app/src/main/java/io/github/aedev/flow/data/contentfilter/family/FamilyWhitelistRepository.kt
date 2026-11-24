@@ -115,7 +115,7 @@ class FamilyWhitelistRepository
             val removedIds = runCatching { subscriptionRepository.unsubscribedTombstones().keys }.getOrDefault(emptySet())
             val missing =
                 FAMILY_SEED_CHANNELS.filterNot { seed ->
-                    seed.channelId.isNotBlank() && seed.channelId in removedIds ||
+                    (seed.channelId.isNotBlank() && seed.channelId in removedIds) ||
                         current.any { existing ->
                             (seed.channelId.isNotBlank() && existing.channelId == seed.channelId) ||
                                 (seed.handle.isNotBlank() && existing.handle.equals(seed.handle, ignoreCase = true))
