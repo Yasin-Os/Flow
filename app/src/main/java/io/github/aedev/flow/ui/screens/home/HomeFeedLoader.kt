@@ -285,9 +285,13 @@ internal class HomeFeedLoader(
                             now = now,
                             freshSlotTarget = dynamicFreshSubSlots(userSubs.size),
                             subAvatarMap = subAvatarMap,
-                            rank = { pool -> FlowNeuroEngine.rank(pool, userSubs, trace = trace) },
+                            // The family feed is newest first: no Neuro ranking, so no
+                            // recommendation work runs at all in family mode.
+                            rank = { pool ->
+                                if (familyMode) pool.sortedByDescending { it.timestamp } else FlowNeuroEngine.rank(pool, userSubs, trace = trace)
+                            },
                             rankRelevant = { pool ->
-                                FlowNeuroEngine.rank(pool, userSubs, NeuroScoring.LANE_RELEVANCE_FLOOR, trace)
+                                if (familyMode) pool.sortedByDescending { it.timestamp } else FlowNeuroEngine.rank(pool, userSubs, NeuroScoring.LANE_RELEVANCE_FLOOR, trace)
                             },
                             share = FlowNeuroEngine::shareByInterest,
                             rawNeighbours = rawNeighbours,
@@ -418,8 +422,11 @@ internal class HomeFeedLoader(
                             }
                         }
 
-                    // Enrich (post-paint) with related neighbours of saved/watched videos.
-                    lateMerges.enrichFeedWithSavedInterest(userSubs, taste)
+                    // No saved-interest enrichment in the family app: it fetches related
+                    // neighbours of saved/watched videos, which is recommendation work.
+                    if (!familyMode) {
+                        lateMerges.enrichFeedWithSavedInterest(userSubs, taste)
+                    }
 
                     // No second discovery wave and no neighbour refresh in the family app:
                     // there is no discovery pool to deepen and no neighbour channel to follow.
@@ -432,7 +439,11 @@ internal class HomeFeedLoader(
                         val offTopicNeighbours = rawNeighbours.map { it.channelId }.toSet() - lanes.relevantNeighbourChannels
                         lateMerges.startNeighbourRefresh(neighbours, offTopicNeighbours, storedFeed, userSubs)
                     }
-                    chipFeeds.refreshChips()
+                    // No chips in the family app: the chip row is hidden, so there is
+                    // nothing to refresh.
+                    if (!familyMode) {
+                        chipFeeds.refreshChips()
+                    }
                 } catch (cancellation: CancellationException) {
                     throw cancellation
                 } catch (e: Exception) {
