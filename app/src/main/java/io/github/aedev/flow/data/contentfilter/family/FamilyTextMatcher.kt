@@ -14,6 +14,9 @@ import java.util.Locale
  *   ghazal channels title their own uploads "Bangla Islamic Song" and "Ramjan Music Video", so
  *   these words must never block a whitelisted channel. Non-whitelisted videos are already
  *   hidden on ranked surfaces; this tier matters at the player and on channel pages.
+ *   Exception: whitelisted NEWS channels stay under this tier — they are approved for news,
+ *   not for music/drama uploads, so a news channel's video titled with an entertainment word
+ *   is still blocked (see [FamilyChannelMatcher.isNewsChannel]).
  *
  * Deliberately NOT in either list: `গজল` (ghazal), `সুরা` (surah), `নিকাহ`/`نكاح` (marriage),
  * `চটি` (also "slipper" in Bangla), and `hot` (too generic) — and also `lust`, `breast`,
@@ -51,7 +54,8 @@ class FamilyTextMatcher(
 
     /**
      * Whether a video's title or description is blocked. The hard tier always applies; the
-     * entertainment tier only when the channel is not whitelisted.
+     * entertainment tier applies when the channel is not whitelisted — and also when it is a
+     * whitelisted news channel, which is approved for news, not for music/drama uploads.
      */
     fun blocks(
         title: String,
@@ -62,8 +66,9 @@ class FamilyTextMatcher(
     ): Boolean {
         val text = "$title\n$description"
         if (blocksHard(text)) return true
-        if (channelMatcher.allows(channelId, handle)) return false
-        return blocksEntertainment(text)
+        if (!channelMatcher.allows(channelId, handle)) return blocksEntertainment(text)
+        if (channelMatcher.isNewsChannel(channelId, handle)) return blocksEntertainment(text)
+        return false
     }
 
     /** Whether a Settings search query is refused outright: any tier matches, no results. */
