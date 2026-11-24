@@ -6,11 +6,14 @@ the player blocks any video whose channel is not on it. Every entry is keyed by 
 verified YouTube channel id (`UC…`); the handle is a fallback only. A blank handle
 means no handle could be confirmed — the id is the match key.
 
-**Counts (129 channels): waz 48 · ghazal 44 · tilawat 22 · cartoons 8 · comedy 5 · drama 2**
+**Counts (244 channels): waz 65 (48 + 17 media) · Ummah Network 1 · ghazal 44 · tilawat 22 ·
+cartoons 8 · comedy 5 · drama 2 · news 97**
 
 The shipped seed list is `app/src/main/java/io/github/aedev/flow/data/contentfilter/family/FamilySeedChannels.kt`.
-Existing installs gain new channels through the seed merge (`SEED_VERSION = 2`); a
-channel the PIN holder removed is never re-added.
+Existing installs gain new channels through the seed merge (`SEED_VERSION = 3`); a
+channel the PIN holder removed is never re-added. News entries carry `category = "news"`:
+they are whitelisted for news, but the entertainment-tier title filter still applies to
+their videos, so a music/drama upload from a news channel is blocked.
 
 ## Waz — 48
 
@@ -64,6 +67,44 @@ channel the PIN holder removed is never re-added.
 | The Muslim Lantern | @themuslimlantern | `UCeCAQhKbU2ETNWxWxB94HgA` |
 | Dr Farhat Hashmi Official | @drfarhathashmiofficial | `UCFnsCaT_2VKBg_SoGjhO1nA` |
 | Belal Assaad | @belal.assaad | `UC34dxKHa9n9ggxz4m7bztfA` |
+
+## Waz — media channels — 17
+
+These speakers have no personal official channel, so their waz lives on media/fan
+channels. The user decided (2026-11-24) that official channels are not required for
+waz — any waz channel is fine. Most of these channels are general: they carry several
+speakers, and some carry political content (see the content notes).
+
+| Channel | Handle | Channel id |
+|---|---|---|
+| Mamunul Haque | @mamunulhaque | `UCzqsR4mncbpd5MOmrwGvETg` |
+| Tafsir Mahfil CHP (Sayeedi) | @tafsirmahfilchp | `UCYCQNElr-0y_0Y8g3sJfEzA` |
+| Abdur Razzak TV (Abdur Razzaq Bin Yousuf) | @AbdurRazzakTV26 | `UCYgQTZfpXTgWB07TIk9XbYw` |
+| Charmonai Darpan | @charmonaidarpan | `UCo4SqJNaVU5JjxBlxPz7enw` |
+| Tafsir Media (Tariq Monowar, Kazi Ibrahim) | @tafsir_media01 | `UCWemh1BC8WfivchxaZtvzIA` |
+| ARAF TV 24 (Abdul Malek) | @araf_tv_24 | `UC_1Qbk7dgRYKJNbY8JeyfXA` |
+| Islamic Voice (Lutfur Rahman, Sadikur) | @islamicvoice71 | `UCZrHV6xzz4gqwX0ziaqyiMA` |
+| Famous Islamic Channel (Olipuri and others) | — | `UCb270Pfpz1dbP5c0yaLivIg` |
+| New Sunnah Tv (Mustakunnabi Kasemi) | — | `UCdh-hWM5cfhlOWlRwcTl1LQ` |
+| Tazbe islamic tv (Nazrul Islam Kasemi) | — | `UCZJKFUNmwa2bZrWAlVsePXw` |
+| bd waz (Mahmudabadi, Ansari) | @bdwaz2030 | `UCW__6NNfUgP6pLQdaaYM1kg` |
+| ISLAMIC NUR MEDIA (Arif Bin Habib) | @islamicnurmedia-original | `UC3gG6klS9qfP212K08ZNHdg` |
+| Rezaul Karim Abrar | @RezaulKarimAbrarofficial | `UCcDymXdkDU1nazhLD1hmrfQ` |
+| hamza tv24 (Amir Hamza) | @hamzatv247 | `UCHFymghyJaYbileWRY7WryA` |
+| Yasmin Mogahed | @yasminmogahedonline | `UCjr67rJYy3mtZgF-hx6lQhA` |
+| Dr Israr Ahmed (Khaaksaar archive) | @khaaksaar | `UCM9vZ7ix3A6pmcXwEnId7nw` |
+| ahb bangla waz (Jamshed Majumdar) | — | `UC9ZrdatGkN4hgwsKQQIh8JQ` |
+
+## Ummah Network — 1
+
+| Channel | Handle | Channel id |
+|---|---|---|
+| Ummah Network (Tamim Al Adnani) | @UmmahNetwork | `UCdC58Fno7uiux5-fDWb3F4Q` |
+
+Added at the user's explicit instruction (2026-11-24) despite the findings recorded
+below: the Jamestown Foundation (Feb 2020) identifies Tamim al-Adnani as spiritual head
+of ABT/Ansar al-Islam, the official al-Qaeda in the Indian Subcontinent (AQIS) branch,
+and SecDev KIRON (Oct 2024) calls Ummah Network "AQIS's most popular Bangla channel".
 
 ## Ghazal / nasheed — 44
 
@@ -173,6 +214,120 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | Eagle Islamic Natok | @eagleislamicnatok | `UCd5A8poxhdxProarD8AU-bw` |
 | The path of islam | — | `UC816Kbi-g_VtbJH0xRTPN2A` |
 
+## News — 97
+
+News channels are whitelisted for news, but the entertainment-tier title filter still
+applies to their videos (`category = "news"` in the seed): a video titled with a
+music/song/dance/movie/drama word is blocked even though the channel is approved.
+Channels that are primarily entertainment, not news, were left out (see below).
+
+### Bangladeshi news — 43
+
+| Channel | Handle | Channel id |
+|---|---|---|
+| Jamuna TV | @jamunatvbd | `UCN6sm8iHiPd0cnoUardDAnw` |
+| Somoy TV | @somoynews360 | `UCxHoBXkY88Tb8z1Ssj6CWsQ` |
+| NTV News | @ntvlatestnews | `UCUDQdVsKssximyFwg4IxnOQ` |
+| Independent Television | @independenttelevision | `UCATUkaOHwO9EP_W87zCiPbA` |
+| ATN News | @atnnewsltd | `UC9Rgo0CrNyd7OWliLekqqGA` |
+| Channel 24 | @channel24digital | `UCHLqIOMPk20w-6cFgkA90jw` |
+| Ekattor TV | @ekattortelevision | `UCtqvtAVmad5zywaziN6CbfA` |
+| DBC News | @dbcnewstv | `UCUvXoiDEKI8VZJrr58g4VAw` |
+| ATN Bangla News | @atnbanglanews | `UCbgcYEdMsuypG2NJ-znBp3w` |
+| RTV News | @rtvnews | `UC2P5Fd5g41Gtdqf0Uzh8Qaw` |
+| BanglaVision NEWS | @banglavisionnews | `UCA4y9g_GRdNrZLH_u5LLSdw` |
+| Boishakhi TV News | @boishakhitvnews | `UCTSvHZkOStz5Ak2J_q6YRlA` |
+| Desh TV News | @deshtvnews | `UCmCCTsDl-eCKw91shC7ZmMw` |
+| NEWS24 | @news24tv | `UCPREnbhKQP-hsVfsfKP-mCw` |
+| mytv Bangladesh | @mytvbangla | `UC9zgYOQB6zkleAQjW53DLeQ` |
+| Mohona TV | @mohonatvltd | `UC9b_MnX3HN9ABYT89QqYMTw` |
+| Nagorik TV | @nagoriktv | `UCig6MgICx3g8p3IHZM45oEA` |
+| EKHON TV | @ekhontv | `UCWVqdPTigfQ-cSNwG7O9MeA` |
+| Bangla TV | @banglatvltd | `UCgsp7WfVvh94TiDoPagPkrg` |
+| Deepto News | @deeptonews | `UC8uzDYcztPf-fICdGTowAAA` |
+| BTV (Bangladesh Television) | @bangladeshtelevision-btv | `UClzwimpLoZu9us9MwalLbtA` |
+| GTV News | @gtvnewsupdate | `UCjIi0uZg4h5Ar8gvLDTrGwA` |
+| Nexus Television | @nexustelevisionbd | `UCN1qq0wbml0AztBgQfaLgGA` |
+| Channel S News | @channelsnews24 | `UCdToTtQYK7AYsarULHfU1EQ` |
+| bdnews24.com | @bdnews24 | `UCjFMRqrsABGBh-6eFUlMuAA` |
+| Prothom Alo | @prothomalo | `UCeG7m5-AJ4I0H4EIleIty4Q` |
+| Kaler Kantho | @kalerkanthochannel | `UCsBqX8QguRdkawdlNbIL1dw` |
+| Daily Jugantor | @dailyjugantorbd | `UCKbhCXpZwAmFN4UHeT8HTjA` |
+| Daily Ittefaq | @dailyittefaqdigital | `UCFRxWDF-ZHgs0X6PckJVC9A` |
+| Dhaka Post | @dhakapostofficial | `UCuzoe7B4zeAKhdhcNKsQJ1w` |
+| Samakal News | @samakalnews | `UCnetEdV8EwzGn36f3pq50ZA` |
+| Naya Diganta | @nayadigantaonline | `UCsS8Tv-eBsgZzC6bZcI9c6g` |
+| Daily Amar Desh | @dailyamardeshnews | `UCVBUCoStRou7DZtlTxmhAmQ` |
+| The Daily Star | @thedailystarnews | `UCKSJ5rTXq-pYgAmAOhVS_zQ` |
+| BBC News বাংলা | @bbcbangla | `UChPD2BQ2dJ-w00klQQkc-Qg` |
+| DW বাংলা | @dwbengali | `UCIIkOzwZIdLfHa4Q13dQrkw` |
+| VOA বাংলা | @voabangla | `UCzMeQSfaUSSuA4MgZ2wlT1Q` |
+| TBN24 | @tbn24usa | `UCv_oQ-sRZoJdEX4K5fQ6q6w` |
+| Bangla Tribune | @banglatribune | `UCPbpOnmqK8O_FC4ejdzDTHQ` |
+| SOMOY TV Bulletin | @somoytvbulletin | `UCNUFterLJ9vpFZZ0try7sLA` |
+| ATN News Live | @atnnewslive | `UCKlhfq1ILoAFav7iw5iCnfA` |
+| Ch24 Bulletin | @channel24bulletin | `UCDESSC7DwGTi8PW16UOlPgA` |
+| Independent Bulletin | @independentbulletin | `UCxOY5cyVG24PftM2RPw-8JA` |
+
+### International / Islamic news — 54
+
+| Channel | Handle | Channel id |
+|---|---|---|
+| Al Jazeera English | @aljazeeraenglish | `UCNye-wNBqNL5ZzHSJj3l8Bg` |
+| Al Jazeera Arabic | @aljazeera | `UCfiwzLy-8yKzIbsmZTzxDgw` |
+| AJ Mubasher | @aljazeeramubasher | `UCCv1Pd24oPErw5S7zJWltnQ` |
+| Al Jazeera Balkans | @ajbalkans | `UC_yXEx3-Gk5drg9qhPzSQSg` |
+| BBC News | @bbcnews | `UC16niRr50-MSBwiO3YDb3RA` |
+| BBC News Arabic | @bbcnewsarabic | `UCelk6aHijZq-GJBBB9YpReA` |
+| BBC News Urdu | @bbcurdu | `UCvm8V4Dwtz0fbPGbpk7RYAg` |
+| CNN | @cnn | `UCupvZG-5ko_eiXAupbDfxWw` |
+| Sky News | @skynews | `UCoMdktPbSTixAyNGwb-UYkQ` |
+| Sky News Arabia | @skynewsarabia | `UCIJXOvggjKtCagMfxvcCzAA` |
+| TRT World | @trtworld | `UC7fWeaHhqgM4Ry-RMpM2YYw` |
+| TRT Arabi | @trtarabi | `UC5GvVahlgulCyo4cshSmbcg` |
+| FRANCE 24 | @france24 | `UCCCPCZNChQdGa9EkATeye4g` |
+| FRANCE 24 English | @france24_en | `UCQfwfsi5VrQ8yKZ-UWmAEFg` |
+| FRANCE 24 Arabic | @france24_ar | `UCdTyuXgmJkG_O8_75eqej-w` |
+| DW News | @dwnews | `UCknLrEdhRCp1aegoMqRaCZg` |
+| VOA News | @voanews | `UCVSNOxehfALut52NbkfRBaA` |
+| VOA Urdu | — | `UCx8MbRAMH-KNJuFLKdsmZ_w` |
+| NDTV | @ndtv | `UCZFMm1mMw0F81Z37aaEzTUA` |
+| WION | @wion | `UC_gUM8rL-Lrg6O3adPW9K1g` |
+| Geo News | @geonews | `UC_vt34wimdCzdkrzVejwX9g` |
+| ARY News | @arynewstvofficial | `UCMmpLL2ucRHAXbNHiCPyIyg` |
+| DawnNews | — | `UCaxR-D8FjZ-2otbU0_Y2grg` |
+| DawnNews English | @dawnnewsenglish | `UC_xWTNsx7zA2uI0ydQikViA` |
+| Samaa TV | @samaatv | `UCJekW1Vj5fCVEGdye_mBN6Q` |
+| Dunya News | @dunyanewsofficial | `UCnMBV5Iw4WqKILKue1nP6Hg` |
+| PTV News | @ptvnewsofficial | `UC5RvV_LtR1dxPCVFGw6dxXA` |
+| Aaj News | @aajtvofficial | `UCgBAPAcLsh_MAPvJprIz89w` |
+| Express News | @expressnewspkofficial | `UCTur7oM6mLL0rM2k0znuZpQ` |
+| Hum News | @humnewspakistan | `UC0Um3pnZ2WGBEeoA3BX2sKw` |
+| 92 News HD | @92newshdtv | `UCsgC5cbz3DE2Shh34gNKiog` |
+| Al Arabiya | @alarabiya | `UCahpxixMCwoANAftn6IxkTg` |
+| Al Arabiya English | @alarabiyaenglish | `UCIZJ9a6P_nxCFJTmL0gh_IQ` |
+| Middle East Eye | @middleeasteye | `UCR0fZh5SBxxMNYdg0VzRFkg` |
+| The National | @thenationaluaechannel | `UCGYf0VFdlSTzcJghW9z1DAA` |
+| Al Mayadeen News | @almayadeennews | `UC9YbjpvsFZytS0DnO1FnTKw` |
+| Press TV | — | `UC-One4A1gGcN__aVAuBbHdA` |
+| i24NEWS English | @i24news_en | `UCvHDpsWKADrDia0c99X37vg` |
+| i24NEWS Français | @i24news_fr | `UCgPYsPyGhhQJQ9zOUQDWDMA` |
+| Anadolu Agency | @anadoluajansi | `UCVbZYhcirOke2vipxs4lT2w` |
+| A Haber | @ahaber | `UCKQhfw-lzz0uKnE1fY1PsAA` |
+| NTV Turkey | @ntv | `UC9TDTjbOjFB9jADmPhSAPsw` |
+| euronews | @euronews | `UCSrZ3UV4jOidv8ppoVuvW9Q` |
+| CGTN | @cgtn | `UCgrNz-aDmcr2uuto8_DL2jg` |
+| NHK WORLD-JAPAN | @nhkworldjapan | `UCSPEjw8F2nQDtmUKPFNF7_A` |
+| ABC News Australia | @abcnewsaustralia | `UCVgO39Bk5sMo66-6o6Spn6Q` |
+| CBC News | @cbcnews | `UCuFFtHWoLl5fauMMD5Ww2jA` |
+| CBC The National | @cbcthenational | `UCKjU3KzdbJE1EFcHVqXC3_g` |
+| ITV News | @itvnews | `UCFQgi22Ht00CpaOQLtvZx2A` |
+| Channel 4 News | @channel4news | `UCTrQ7HXWRRxr7OsOtodr2_w` |
+| Islam Channel | @islamchanneltv | `UCggJmYhtxBk1naIbZN541pw` |
+| 5Pillars | @5pillars | `UCl791j-PxhtLRyRUi2aP9jQ` |
+| Muslim Network TV | @muslimnetworktv | `UC8LjaLk1FQaIIzZMaRF9ujw` |
+| IQRA TV | @iqratv | `UCMyzboNfTPpbHFKI49Jhxxg` |
+
 ## Content notes — channels on the list with a caveat
 
 These channels are whitelisted, but the PIN holder should know what else they carry:
@@ -206,18 +361,35 @@ These channels are whitelisted, but the PIN holder should know what else they ca
   Jamia Talimia Madrasa Dhaka is Hafizur Rahman Siddiqui's madrasa channel, the
   closest thing to an official channel for him — he has no personal one.
   Hefazat Media is an organisation media channel, not one speaker's channel.
+- **Waz, media channels:** several carry political content — Mamunul Haque (Khilafat
+  Majlis/party speeches), Charmonai Darpan (party commentary), hamza tv24 (Amir Hamza
+  is now an MP), Rezaul Karim Abrar, Dr Israr Ahmed archive (anti-Western lectures).
+  Most media channels are general, not one speaker: Tafsir Media, Famous Islamic
+  Channel, Islamic Voice, bd waz and New Sunnah Tv also carry other speakers.
+  ARAF TV 24 is mostly audio-form khutbas (Abdul Malek does not allow video).
+- **Ummah Network:** videos include jihad/Ghazwatul Hind, anti-democracy and
+  political content — see the Jamestown/SecDev findings in the Ummah Network section
+  above. Added at the user's explicit instruction.
+- **News:** several listed news channels also carry entertainment — ATN Bangla News,
+  mytv, Mohona TV, Bangla TV, BTV, TBN24, Prothom Alo, Dhaka Post, Samakal; the
+  entertainment title filter still applies to every news channel. The
+  mainly-entertainment channels (Deepto TV, Channel i, Maasranga, Asian TV, BIJOY TV,
+  SATV, Ekushey TV) were left out entirely — only their news arms, where one exists,
+  are listed. DW বাংলা has sexually explicit titles among its most-viewed videos;
+  those titles are caught by the hard tier. VOA News and VOA বাংলা look dormant
+  (newest videos ~early 2025); their archives stay. BBC News Arabic, FRANCE 24
+  Arabic and Press TV were verified through second-hand sources (their YouTube pages
+  returned empty text) — spot-check them in the app.
 
 ## Explicitly NOT whitelisted
 
-- **Ummah Network / Tamim Al Adnani — EXCLUDED, decision needed.** The user asked
-  for this channel, but research found it is identified by the Jamestown Foundation
-  (Feb 2020) as a channel of Tamim al-Adnani, described as spiritual head of
-  ABT/Ansar al-Islam, the official al-Qaeda in the Indian Subcontinent (AQIS)
-  branch; SecDev KIRON (Oct 2024) calls Ummah Network "AQIS's most popular Bangla
-  channel". Channel id on record (do NOT use): `UCdC58Fno7uiux5-fDWb3F4Q`,
-  handle @UmmahNetwork. Do not add without the user being told this first.
-- **News channels — NOT added yet.** The user is still deciding the scope; no news
-  channel is whitelisted in this round.
+- **News channels left out (primarily entertainment, not news):** Deepto TV (its news
+  arm Deepto News is listed), Channel i, Maasranga TV, Asian Television, BIJOY TV,
+  SATV, Ekushey TV — their top videos are natok, movies, music and dance shows.
+- **No YouTube channel:** RT English (blocked globally by YouTube, 2022), Al Manar TV
+  (banned from YouTube), Peace TV (no official YouTube channel found), British Muslim
+  TV (channel exists but no UC id could be found). CNN International has no distinct
+  channel — CNN's main channel is its YouTube presence.
 - **MiniMuslims** (`UCIDYe6rgdROl77DDevNIcPA`) and **Muslim Kids TV**
   (`UCDz4xz5CW-9n4NJ5mrn7RZA`) — music-heavy nursery-rhyme cartoons, excluded.
 - **The Daily Reminder** (`UCIuUOdkiW3uUD3ITS5PCK_A`) — some old videos feature
@@ -235,24 +407,25 @@ as official channels. The names below could not be added for that reason (or the
 channel id could not be confirmed). A clearly-labelled "trusted media channels"
 tier would be needed to include them — that is a decision for the user.
 
-- **Waz, no official channel found:** Mamunul Haque, Tariq Monowar, Mufti Syed
-  Faizul Karim / Charmonai (incl. Syed Rezaul Karim), Delwar Hossain Sayeedi,
-  Mufti Harun Izhar, Junaid Al Habib, Habibur Rahman Misbah, Mufti Hasan Jamil
-  (waz speaker — not the Kalarab singer), Abdur Razzaq Bin Yousuf, Abdullah Bin
-  Abdur Razzak, Khaled Saifullah Ayubi, Nurul Islam Olipuri, Mufti Abdul Malek
-  (does not allow videos — audio only), Dr. Lutfur Rahman (deceased), Mufti Arif
-  Bin Habib, Sadikur Rahman Al Azhari, Ali Hasan Osama, Jamshed Majumdar,
-  Mufti Mizanur Rahman Saeed, Mufti Mustakunnabi Kasemi, Mufti Nazrul Islam
-  Kasemi, Mufti Rezaul Karim Abrar (official channel exists, id unconfirmed),
-  Mufti Shahidur Rahman Mahmudabadi, Mufti Abdur Rahim Al Madani, Mufti
-  Sharifuzzaman Rajibpuri, Mufti Nasir Uddin Ansari, Mufti Junaid Al Habib,
-  Allama Junaid Babunagari, Suhaib Webb, Imam Siraj Wahhaj, Kamal El Mekki,
-  Dr Israr Ahmed (official channel id unconfirmed), Waleed Basyouni (official
-  channel exists, id unconfirmed), Yasmin Mogahed (id unconfirmed),
-  Taimiyyah Zubair, Abdul Nasir Jangda (lectures on Qalam Institute, listed),
-  Kazi Ibrahim (Kazi Islamic TV exists, id unconfirmed), Charmonai Darpan
-  (exists, id unconfirmed), Islami Andolan Bangladesh (no official channel),
-  Peace TV Bangla (no YouTube channel).
+- **Waz, no dedicated channel found:** Mufti Harun Izhar, Junaid Al Habib, Habibur
+  Rahman Misbah, Mufti Hasan Jamil (waz speaker — not the Kalarab singer), Abdullah
+  Bin Abdur Razzak (main carrier Allah Bhorsa TV — UC id unresolved), Mufti Mizanur
+  Rahman Saeed (mainly on Facebook), Mufti Abdur Rahim Al Madani (main carrier
+  Fitrat Waz — UC id unresolved), Allama Junaid Babunagari (died 2021; archive
+  channel "Islamic BD" — UC id unresolved), Suhaib Webb, Imam Siraj Wahhaj, Kamal
+  El Mekki, Taimiyyah Zubair, Waleed Basyouni (official channel exists, id
+  unconfirmed), Islami Andolan Bangladesh (no official channel), Peace TV Bangla
+  (no YouTube channel). The speakers removed from this list in round 3 are covered
+  by the media channels above.
+- **News, id unconfirmed (handles seen, UC not verified):** ATN News TV
+  (@atnnews24), Independent World (@independentworld), Independent Sports
+  (@independentsports), NEWS24 TV (@news24tvbd), mytvbd news (@mytvbdnews), Asian
+  News (@asiannewslive), ETV – Ekusher Chokh (@ekusherchokh), Global TV News
+  (@gbltvnews24), NABA TV24 (@nabatv24), Viral BD24 (@viralbd24viral), ONLINE TV
+  BANGLA (@onlinetvbangla24), Bangladesh Bulletin (@dailybdbulletin), Bangla Edition
+  (@banglaeditionbd), Dhaka Age (@dhakaage), Daily Issues (@dailyissuesbd), T Bangla
+  (@tbangla), Voice Bangla (@voicebanglatv). "Somoy National" does not exist as a
+  distinct channel.
 - **Tilawat, no official channel or id unconfirmed:** Mahmoud Khalil Al-Husary
   (official channel exists, managed by Diwan Videos — id unconfirmed), Hani Ar
   Rifai (official channel exists — id unconfirmed), Idris Abkar, Abdullah Al
