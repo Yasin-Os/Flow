@@ -239,7 +239,7 @@ class PlayerSecondaryMetadataLoaderTest {
         }
 
     @Test
-    fun `related candidates are sanitised before they are published`() =
+    fun `family mode publishes no related videos even when primary candidates exist`() =
         runTest(testDispatcher) {
             shortsEnabled = false
             val loader = loader()
@@ -259,26 +259,25 @@ class PlayerSecondaryMetadataLoaderTest {
             )
             advanceUntilIdle()
 
-            assertThat(relatedResults().single().videos.map { it.id }).containsExactly("v2", "v4").inOrder()
+            assertThat(relatedResults()).isEmpty()
             coVerify(exactly = 0) { repository.getRelatedCandidates(any()) }
         }
 
     @Test
-    fun `the related fallback request runs once per load and is dropped while in flight`() =
+    fun `family mode never asks for related candidates however often the load is repeated`() =
         runTest(testDispatcher) {
-            coEvery { repository.getRelatedCandidates("v1") } returns listOf(video("v2"))
             val loader = loader()
 
             playing("v1")
             repeat(3) { loader.loadRelatedVideos("v1", primaryCandidates = emptyList(), loadToken = TOKEN_A) }
             advanceUntilIdle()
 
-            coVerify(exactly = 1) { repository.getRelatedCandidates("v1") }
-            assertThat(relatedResults().single().videos.map { it.id }).containsExactly("v2")
+            coVerify(exactly = 0) { repository.getRelatedCandidates(any()) }
+            assertThat(relatedResults()).isEmpty()
         }
 
     @Test
-    fun `YouTube's pick from the watch page heads the published lane`() =
+    fun `family mode ignores the watch page's related pick`() =
         runTest(testDispatcher) {
             stubWatchPage(listOf("a", "b", "pick"), upNext = "pick", continuation = "next")
             val loader = loader()
@@ -287,15 +286,13 @@ class PlayerSecondaryMetadataLoaderTest {
             loader.loadRelatedVideos("v1", primaryCandidates = emptyList(), loadToken = TOKEN_A)
             advanceUntilIdle()
 
-            val related = relatedResults().single()
-            assertThat(related.videos.map { it.id }).containsExactly("pick", "a", "b").inOrder()
-            assertThat(related.upNextVideoId).isEqualTo("pick")
-            assertThat(related.continuation).isEqualTo("next")
+            assertThat(relatedResults()).isEmpty()
+            coVerify(exactly = 0) { repository.watchNextResponse(any()) }
             coVerify(exactly = 0) { repository.getRelatedCandidates(any()) }
         }
 
     @Test
-    fun `a video autoplay rolled into keeps the page's label and next-page token`() =
+    fun `family mode keeps no autoplay label or next-page token from a rolled-in video`() =
         runTest(testDispatcher) {
             stubWatchPage(listOf("a", "b", "pick"), upNext = "pick", continuation = "next")
             every { playerManager.relatedCandidatesFor("v1") } returns listOf(video("pick"), video("a"), video("b"))
@@ -305,16 +302,13 @@ class PlayerSecondaryMetadataLoaderTest {
             loader.loadRelatedVideos("v1", primaryCandidates = emptyList(), loadToken = TOKEN_A)
             advanceUntilIdle()
 
-            val related = relatedResults().last()
-            assertThat(related.videos.map { it.id }).containsExactly("pick", "a", "b").inOrder()
-            assertThat(related.upNextVideoId).isEqualTo("pick")
-            assertThat(related.continuation).isEqualTo("next")
-            coVerify(exactly = 1) { repository.watchNextResponse("v1") }
+            assertThat(relatedResults()).isEmpty()
+            coVerify(exactly = 0) { repository.watchNextResponse(any()) }
             coVerify(exactly = 0) { repository.getRelatedCandidates(any()) }
         }
 
     @Test
-    fun `a pick the viewer hid leaves today's order and no label`() =
+    fun `family mode publishes no related videos for a hidden pick either`() =
         runTest(testDispatcher) {
             stubWatchPage(listOf("a", "b", "pick"), upNext = "pick")
             exclusions = FeedExclusions(suppressedVideoIds = setOf("pick"))
@@ -324,13 +318,13 @@ class PlayerSecondaryMetadataLoaderTest {
             loader.loadRelatedVideos("v1", primaryCandidates = emptyList(), loadToken = TOKEN_A)
             advanceUntilIdle()
 
-            val related = relatedResults().single()
-            assertThat(related.videos.map { it.id }).containsExactly("a", "b").inOrder()
-            assertThat(related.upNextVideoId).isNull()
+            assertThat(relatedResults()).isEmpty()
+            coVerify(exactly = 0) { repository.watchNextResponse(any()) }
+            coVerify(exactly = 0) { repository.getRelatedCandidates(any()) }
         }
 
     @Test
-    fun `playlists reach the lane where YouTube listed them and the Shorts shelf follows the Shorts switch`() =
+    fun `family mode publishes no playlists or Shorts shelf from the watch page`() =
         runTest(testDispatcher) {
             shortsEnabled = false
             coEvery { repository.watchNextResponse("v1") } returns
@@ -350,9 +344,9 @@ class PlayerSecondaryMetadataLoaderTest {
             loader.loadRelatedVideos("v1", primaryCandidates = emptyList(), loadToken = TOKEN_A)
             advanceUntilIdle()
 
-            val related = relatedResults().single()
-            assertThat(related.videos.map { it.id }).containsExactly("a", "b").inOrder()
-            assertThat(related.collections.map { it.key to it.position }).containsExactly("related_playlist:RDa" to 1)
+            assertThat(relatedResults()).isEmpty()
+            coVerify(exactly = 0) { repository.watchNextResponse(any()) }
+            coVerify(exactly = 0) { repository.getRelatedCandidates(any()) }
         }
 
     private fun stubWatchPage(
