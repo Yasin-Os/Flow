@@ -8,7 +8,7 @@ package io.github.aedev.flow.data.contentfilter.family
  * ([FamilyChannelMatcher] ignores blank handles).
  *
  * Counts: waz 65 (48 + 17 media), Ummah Network 1, ghazal 44, tilawat 22, cartoons 8,
- * comedy 5, drama 2, news 97 — 244 channels. News entries carry `category = "news"`: they
+ * comedy 5, drama 2, news 96 — 243 channels. News entries carry `category = "news"`: they
  * are whitelisted for news, but the entertainment-tier title filter still applies to their
  * videos. Ummah Network was added at the user's explicit instruction (see the doc).
  * The full list, with the channels that were deliberately left out and why, is in
@@ -171,7 +171,7 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
         // Halal drama / natok — 2
         FamilyChannel(channelId = "UCd5A8poxhdxProarD8AU-bw", handle = "@eagleislamicnatok", name = "Eagle Islamic Natok"),
         FamilyChannel(channelId = "UC816Kbi-g_VtbJH0xRTPN2A", handle = "", name = "The path of islam"),
-        // News — 97 (Bangladeshi 43, international / Islamic 54). category = "news": the
+        // News — 96 (Bangladeshi 43, international / Islamic 53). category = "news": the
         // entertainment-tier title filter still applies to these channels' videos.
         FamilyChannel(channelId = "UCN6sm8iHiPd0cnoUardDAnw", handle = "@jamunatvbd", name = "Jamuna TV", category = "news"),
         FamilyChannel(channelId = "UCxHoBXkY88Tb8z1Ssj6CWsQ", handle = "@somoynews360", name = "Somoy TV", category = "news"),
@@ -262,7 +262,6 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
         FamilyChannel(channelId = "UCR0fZh5SBxxMNYdg0VzRFkg", handle = "@middleeasteye", name = "Middle East Eye", category = "news"),
         FamilyChannel(channelId = "UCGYf0VFdlSTzcJghW9z1DAA", handle = "@thenationaluaechannel", name = "The National", category = "news"),
         FamilyChannel(channelId = "UC9YbjpvsFZytS0DnO1FnTKw", handle = "@almayadeennews", name = "Al Mayadeen News", category = "news"),
-        FamilyChannel(channelId = "UC-One4A1gGcN__aVAuBbHdA", handle = "", name = "Press TV", category = "news"),
         FamilyChannel(channelId = "UCvHDpsWKADrDia0c99X37vg", handle = "@i24news_en", name = "i24NEWS English", category = "news"),
         FamilyChannel(channelId = "UCgPYsPyGhhQJQ9zOUQDWDMA", handle = "@i24news_fr", name = "i24NEWS Français", category = "news"),
         FamilyChannel(channelId = "UCVbZYhcirOke2vipxs4lT2w", handle = "@anadoluajansi", name = "Anadolu Agency", category = "news"),
@@ -280,4 +279,16 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
         FamilyChannel(channelId = "UCl791j-PxhtLRyRUi2aP9jQ", handle = "@5pillars", name = "5Pillars", category = "news"),
         FamilyChannel(channelId = "UC8LjaLk1FQaIIzZMaRF9ujw", handle = "@muslimnetworktv", name = "Muslim Network TV", category = "news"),
         FamilyChannel(channelId = "UCMyzboNfTPpbHFKI49Jhxxg", handle = "@iqratv", name = "IQRA TV", category = "news"),
+    )
+
+/**
+ * Channel ids that were in the seed and have since been removed (bogus or dead ids). The merge
+ * in [FamilyWhitelistRepository] prunes these from existing installs; the set is explicit so a
+ * channel the PIN holder added themselves is never touched by the prune.
+ */
+val REMOVED_SEED_IDS: Set<String> =
+    setOf(
+        // Press TV: the id kept failing to load, the channel was terminated repeatedly, and
+        // @presstv belongs to a random person — no live official channel exists under this id.
+        "UC-One4A1gGcN__aVAuBbHdA",
     )
