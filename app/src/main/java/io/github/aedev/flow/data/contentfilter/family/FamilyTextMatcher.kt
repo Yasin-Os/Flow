@@ -4,26 +4,64 @@ import java.text.Normalizer
 import java.util.Locale
 
 /**
- * Two tiers of blocked words, matched after normalization:
+ * Three tiers of blocked words, matched after normalization:
  *
  * - **Hard tier** — explicit/sexual terms in English, Bangla, Hindi/Urdu (roman, Devanagari and
  *   Urdu script) and Arabic. Applies to every video, whitelisted channels included, and to
- *   Settings search queries.
+ *   Settings search queries. Gemini's ADULT_ROMANCE sets merged into the built-in list.
+ * - **Vice tier** — gambling, alcohol and drugs, in the same five language groups. Applies to
+ *   every video too, but a lecture *about* the sin is exempt: when the text also carries an
+ *   [ISLAMIC_EXEMPTION_MARKERS] term (waz, tafsir, hadith, quran, হারাম, ...), the vice match
+ *   does not block. "জুয়া ও মদপানের ভয়াবহতা - নতুন ওয়াজ" passes; "জুয়া খেলার নিয়ম" is
+ *   blocked. The vice exemption also skips the short-root title regexes (see below), so a
+ *   lecture whose only regex hit is a vice root is not blocked by a regex either.
  * - **Entertainment tier** — music, song, dance, movie, drama, DJ, remix, film and their
- *   translations. Applies only to videos from channels that are NOT whitelisted: the approved
- *   ghazal channels title their own uploads "Bangla Islamic Song" and "Ramjan Music Video", so
- *   these words must never block a whitelisted channel. Non-whitelisted videos are already
- *   hidden on ranked surfaces; this tier matters at the player and on channel pages.
+ *   translations (Gemini's MUSIC/MOVIES/DRAMA/DANCE_DJ sets merged into the built-in list).
+ *   Applies only to videos from channels that are NOT whitelisted: the approved ghazal
+ *   channels title their own uploads "Bangla Islamic Song" and "Ramjan Music Video", so these
+ *   words must never block a whitelisted channel. Non-whitelisted videos are already hidden
+ *   on ranked surfaces; this tier matters at the player, on channel pages and in open search.
  *   Exception: whitelisted NEWS channels stay under this tier — they are approved for news,
  *   not for music/drama uploads, so a news channel's video titled with an entertainment word
  *   is still blocked (see [FamilyChannelMatcher.isNewsChannel]).
  *
- * Deliberately NOT in either list: `গজল` (ghazal), `সুরা` (surah), `নিকাহ`/`نكاح` (marriage),
- * `চটি` (also "slipper" in Bangla), and `hot` (too generic) — and also `lust`, `breast`,
- * `seduce`, `زنا` (zina) and `دعارة` (prostitution): those are ordinary words in Islamic
- * lectures about controlling desire and avoiding sin, and the hard tier applies to whitelisted
- * channels too, so they would hide legitimate waz titles. A title like "গজল | Holy Tune"
- * or "সুরা আল-বাকারা" must pass untouched.
+ * Before any tier is checked, the halal negations in [STRIP_BEFORE_MATCH] are stripped from
+ * the text ("No Music Nasheed", "ইসলামী সংগীত", "music free", ...), so a nasheed that says
+ * it has no music is not blocked by the word "music". The strip applies to the blocklist
+ * only — the topic matcher sees the unstripped text, so "ইসলামী সংগীত" still matches the
+ * NASHEED topic.
+ *
+ * Title regexes ([TITLE_REGEXES]) join the entertainment-tier check, never the hard tier:
+ * they catch short roots that are unsafe even as whole words ("গান" would match "বাগান" as a
+ * substring, so it lives in a boundary-safe regex instead of a word list). Regex 6
+ * (drama/serial + episode number) is skipped when the drama carve-out applies; regexes 1–2
+ * (the short roots, including vice roots like beer/mad/jua) are skipped when the vice
+ * exemption applies. Blocked emojis ([BLOCKED_EMOJIS]) and blocked channel-name substrings
+ * ([BLOCKED_CHANNEL_SUBSTRINGS]) apply in the non-whitelisted branch; channel-name
+ * substrings never apply to a whitelisted channel, and emojis never block a whitelisted
+ * channel's own videos either (a whitelisted nasheed titled with 🎵 passes).
+ *
+ * Drama carve-out: when the matched topic is halal drama, the entertainment pattern drops
+ * the drama sets and the generic film words ("movie", "film", "cinema", "short film", ...),
+ * so "The Message Movie" and "islamic short film" pass. Studio/brand/genre words
+ * (hollywood, bollywood, netflix, trailer, concert, song) still block.
+ *
+ * Deliberately NOT in any list: `গজল` (ghazal), `সুরা` (surah), `নিকাহ`/`نكاح` (marriage),
+ * `চটি` (also "slipper" in Bangla), and `hot` (too generic — whitelisted news titles like
+ * "Hot News" would be blocked) — and also `lust`, `breast`, `seduce`, `زنا` (zina) and
+ * `دعارة` (prostitution): those are ordinary words in Islamic lectures about controlling
+ * desire and avoiding sin, and the hard tier applies to whitelisted channels too, so they
+ * would hide legitimate waz titles. Dropped from Gemini's lists for the same reason:
+ * "seduction" and "seductive" (noun/adjective forms of "seduce") and "دعارة". A title like
+ * "গজল | Holy Tune" or "সুরা আল-বাকারা" must pass untouched.
+ *
+ * Known over-block edges, kept deliberately: "romance" is in the hard tier, so a waz titled
+ * "Romance in Islam" would be blocked — the word is overwhelmingly romantic/entertainment
+ * content. Regex 3 ("ft"/"feat") can hit a nasheed collaboration ("Gojol ft. ...") and
+ * regex 1's "gay" can hit a lecture about homosexuality; both are entertainment-tier only,
+ * so whitelisted channels are unaffected. "prostitut" and "masturbat" are dead stems Gemini
+ * supplied (they never match under whole-word boundaries); the lists already carry
+ * "prostitute" and "masturbate".
  *
  * Matching: the text is NFC-normalized, lowercased, stripped of Arabic diacritics and leet-folded
  * (`0→o, 1→i, 3→e, 4→a, 5→s, 7→t, 8→b, @→a, $→s`), so `s3x`, `s*x` and `s e x` all match
@@ -39,23 +77,66 @@ class FamilyTextMatcher(
     hardTerms: List<String>,
     entertainmentTerms: List<String>,
     customTerms: Set<String>,
+    viceTerms: List<String> = emptyList(),
 ) {
     private val hardPattern = buildPattern(hardTerms)
     private val entertainmentPattern = buildPattern(entertainmentTerms + customTerms)
+    private val entertainmentPatternExemptDrama =
+        buildPattern(
+            (entertainmentTerms + customTerms)
+                .map { normalize(it) }
+                .distinct()
+                .filter { it !in DRAMA_AND_FILM_WORDS_NORMALIZED },
+        )
+    private val vicePattern = buildPattern(viceTerms)
+    private val exemptionPattern = buildPattern(ISLAMIC_EXEMPTION_MARKERS)
+    private val stripPattern = buildPattern(STRIP_BEFORE_MATCH)
 
     /** True when no tier has any words, so nothing can match. */
-    val isEmpty: Boolean get() = hardPattern == null && entertainmentPattern == null
+    val isEmpty: Boolean
+        get() =
+            hardPattern == null && entertainmentPattern == null &&
+                vicePattern == null && exemptionPattern == null
 
     /** The hard tier only: explicit/sexual terms. */
-    fun blocksHard(text: String): Boolean = hardPattern?.containsMatchIn(normalize(text)) == true
-
-    /** The entertainment tier only: music/song/dance/movie/drama and translations. */
-    fun blocksEntertainment(text: String): Boolean = entertainmentPattern?.containsMatchIn(normalize(text)) == true
+    fun blocksHard(text: String): Boolean = hardPattern?.containsMatchIn(strippedNormalized(text)) == true
 
     /**
-     * Whether a video's title or description is blocked. The hard tier always applies; the
-     * entertainment tier applies when the channel is not whitelisted — and also when it is a
-     * whitelisted news channel, which is approved for news, not for music/drama uploads.
+     * The vice tier only: gambling/alcohol/drugs, unless the text is a lecture about the sin
+     * (it carries an [ISLAMIC_EXEMPTION_MARKERS] term).
+     */
+    fun blocksVice(text: String): Boolean {
+        val stripped = strippedNormalized(text)
+        return vicePattern?.containsMatchIn(stripped) == true &&
+            exemptionPattern?.containsMatchIn(stripped) != true
+    }
+
+    /**
+     * The entertainment tier only: music/song/dance/movie/drama and translations, plus the
+     * title regexes. When [exemptDrama] is true (the matched topic is halal drama), the drama
+     * sets and generic film words are dropped and the drama+episode regex is skipped. When
+     * the text is a vice-exempt lecture, the short-root regexes are skipped too.
+     */
+    fun blocksEntertainment(
+        text: String,
+        exemptDrama: Boolean = false,
+    ): Boolean = blocksEntertainmentNormalized(strippedNormalized(text), exemptDrama)
+
+    /** True when the text carries a blocked emoji. */
+    fun containsBlockedEmoji(text: String): Boolean = BLOCKED_EMOJIS.any { normalize(text).contains(it) }
+
+    /** True when the (non-whitelisted) channel name carries a blocked substring. */
+    fun isBlockedChannelName(channelName: String): Boolean {
+        val normalized = normalize(channelName)
+        return BLOCKED_CHANNEL_SUBSTRINGS.any { normalized.contains(it) }
+    }
+
+    /**
+     * Whether a video's title or description is blocked. The hard tier always applies, then
+     * the vice tier (with its lecture exemption); the entertainment tier, the emoji check and
+     * the channel-name check apply when the channel is not whitelisted — and the entertainment
+     * tier and the emoji check also when it is a whitelisted news channel, which is approved
+     * for news, not for music/drama uploads.
      */
     fun blocks(
         title: String,
@@ -63,16 +144,78 @@ class FamilyTextMatcher(
         channelId: String,
         handle: String?,
         channelMatcher: FamilyChannelMatcher,
+        channelName: String = "",
+        exemptDrama: Boolean = false,
     ): Boolean {
-        val text = "$title\n$description"
-        if (blocksHard(text)) return true
-        if (!channelMatcher.allows(channelId, handle)) return blocksEntertainment(text)
-        if (channelMatcher.isNewsChannel(channelId, handle)) return blocksEntertainment(text)
-        return false
+        val text = strippedNormalized("$title\n$description")
+        if (hardPattern?.containsMatchIn(text) == true) return true
+        val viceMatches = vicePattern?.containsMatchIn(text) == true
+        val viceExempt =
+            viceMatches && exemptionPattern?.containsMatchIn(text) == true
+        if (viceMatches && !viceExempt) return true
+        val whitelisted = channelMatcher.allows(channelId, handle)
+        if (whitelisted && !channelMatcher.isNewsChannel(channelId, handle)) return false
+        if (!whitelisted && channelName.isNotBlank() && isBlockedChannelName(channelName)) {
+            return true
+        }
+        if (BLOCKED_EMOJIS.any { text.contains(it) }) return true
+        val pattern = if (exemptDrama) entertainmentPatternExemptDrama else entertainmentPattern
+        if (pattern?.containsMatchIn(text) == true) return true
+        return matchesTitleRegexes(text, exemptDrama, viceExempt)
     }
 
-    /** Whether a Settings search query is refused outright: any tier matches, no results. */
-    fun blocksQuery(query: String): Boolean = blocksHard(query) || blocksEntertainment(query)
+    /**
+     * Whether a Settings search query is refused outright: any tier matches, no results.
+     * Strict — no topic relaxation here; the open-search gate in SearchViewModel relaxes the
+     * entertainment and vice tiers when the query itself matches an approved topic.
+     */
+    fun blocksQuery(query: String): Boolean {
+        val text = strippedNormalized(query)
+        if (hardPattern?.containsMatchIn(text) == true) return true
+        if (vicePattern?.containsMatchIn(text) == true &&
+            exemptionPattern?.containsMatchIn(text) != true
+        ) {
+            return true
+        }
+        if (BLOCKED_EMOJIS.any { text.contains(it) }) return true
+        return blocksEntertainmentNormalized(text, exemptDrama = false)
+    }
+
+    /** The halal negations stripped, then normalized — the text every tier matches against. */
+    private fun strippedNormalized(text: String): String {
+        val normalized = normalize(text)
+        return stripPattern?.replace(normalized, "") ?: normalized
+    }
+
+    private fun blocksEntertainmentNormalized(
+        text: String,
+        exemptDrama: Boolean,
+    ): Boolean {
+        val pattern = if (exemptDrama) entertainmentPatternExemptDrama else entertainmentPattern
+        if (pattern?.containsMatchIn(text) == true) return true
+        val viceExempt =
+            vicePattern?.containsMatchIn(text) == true &&
+                exemptionPattern?.containsMatchIn(text) == true
+        return matchesTitleRegexes(text, exemptDrama, viceExempt)
+    }
+
+    /**
+     * The six title regexes. Index 5 (drama/serial + episode number) is skipped under the
+     * drama carve-out; indices 0–1 (the short roots, including vice roots) are skipped when
+     * the text is a vice-exempt lecture.
+     */
+    private fun matchesTitleRegexes(
+        text: String,
+        exemptDrama: Boolean,
+        skipShortRootRegexes: Boolean = false,
+    ): Boolean {
+        TITLE_REGEXES.forEachIndexed { index, regex ->
+            if (index == 5 && exemptDrama) return@forEachIndexed
+            if (index < 2 && skipShortRootRegexes) return@forEachIndexed
+            if (regex.containsMatchIn(text)) return true
+        }
+        return false
+    }
 
     companion object {
         /**
@@ -96,7 +239,7 @@ class FamilyTextMatcher(
         /** No words at all; only used where a matcher must exist before the repository loads. */
         val EMPTY = FamilyTextMatcher(emptyList(), emptyList(), emptySet())
 
-        /** Explicit/sexual terms. */
+        /** Explicit/sexual terms: the built-in list plus Gemini's ADULT_ROMANCE sets. */
         val DEFAULT_HARD_WORDS: List<String> =
             listOf(
                 // English
@@ -187,9 +330,10 @@ class FamilyTextMatcher(
                 "عاهرة",
                 "قضيب",
                 "فرج",
-            )
+            ) + ADULT_ROMANCE_EN + ADULT_ROMANCE_BN + ADULT_ROMANCE_AR +
+                ADULT_ROMANCE_UR + ADULT_ROMANCE_HI_UR_TRANSLIT
 
-        /** Entertainment terms. Never applied to a whitelisted channel's own videos. */
+        /** Entertainment terms: the built-in list plus Gemini's MUSIC/MOVIES/DRAMA/DANCE_DJ sets. */
         val DEFAULT_ENTERTAINMENT_WORDS: List<String> =
             listOf(
                 "music",
@@ -228,9 +372,54 @@ class FamilyTextMatcher(
                 "رقص",
                 "مسلسل",
                 "سينما",
-            )
+            ) + MUSIC_EN + MUSIC_BN + MUSIC_AR + MUSIC_UR + MUSIC_HI_UR_TRANSLIT +
+                MOVIES_EN + MOVIES_BN + MOVIES_AR + MOVIES_UR + MOVIES_HI_UR_TRANSLIT +
+                DRAMA_EN + DRAMA_BN + DRAMA_AR + DRAMA_UR + DRAMA_HI_UR_TRANSLIT +
+                DANCE_DJ_EN + DANCE_DJ_BN + DANCE_DJ_AR + DANCE_DJ_UR + DANCE_DJ_HI_UR_TRANSLIT
 
-        val DEFAULT = FamilyTextMatcher(DEFAULT_HARD_WORDS, DEFAULT_ENTERTAINMENT_WORDS, emptySet())
+        /** Gambling/alcohol/drugs terms: Gemini's VICE sets. */
+        val DEFAULT_VICE_WORDS: List<String> =
+            listOf<String>() + VICE_EN + VICE_BN + VICE_AR + VICE_UR + VICE_HI_UR_TRANSLIT
+
+        /**
+         * The drama sets plus the generic film words. The drama carve-out drops exactly these
+         * from the entertainment pattern; studio/brand/genre words (hollywood, bollywood,
+         * netflix, trailer, concert, song) are NOT in here and still block.
+         */
+        private val DRAMA_AND_FILM_WORDS: Set<String> =
+            DRAMA_EN + DRAMA_BN + DRAMA_AR + DRAMA_UR + DRAMA_HI_UR_TRANSLIT +
+                setOf(
+                    "movie",
+                    "movies",
+                    "film",
+                    "films",
+                    "cinema",
+                    "telefilm",
+                    "webfilm",
+                    "web film",
+                    "short film",
+                    "সিনেমা",
+                    "চলচ্চিত্র",
+                    "ফিল্ম",
+                    "फिल्म",
+                    "सिनेमा",
+                    "चलचित्र",
+                    "فيلم",
+                    "سينما",
+                    "فلم",
+                    "سینما",
+                )
+
+        private val DRAMA_AND_FILM_WORDS_NORMALIZED: Set<String> =
+            DRAMA_AND_FILM_WORDS.map { normalize(it) }.toSet()
+
+        val DEFAULT =
+            FamilyTextMatcher(
+                DEFAULT_HARD_WORDS,
+                DEFAULT_ENTERTAINMENT_WORDS,
+                emptySet(),
+                DEFAULT_VICE_WORDS,
+            )
 
         /** NFC, lowercase, no Arabic diacritics or tatweel, leet-folded. */
         fun normalize(text: String): String {
@@ -245,7 +434,7 @@ class FamilyTextMatcher(
             return folded.toString()
         }
 
-        private fun buildPattern(terms: Collection<String>): Regex? {
+        internal fun buildPattern(terms: Collection<String>): Regex? {
             val alternatives =
                 terms
                     .map { normalize(it) }
