@@ -47,9 +47,10 @@ object SubscriptionRefreshPlanner {
         groupChannelIds: Set<String>,
         now: Long,
         force: Boolean = false,
+        maxChannels: Int? = null,
     ): SubscriptionRefreshPlan {
         val inGroup = subscriptions.filter { it.channelId in groupChannelIds }
-        return plan(inGroup, now, force = force).copy(
+        return plan(inGroup, now, force = force, maxChannels = maxChannels).copy(
             isFullRefresh = false,
             readAllTabs = inGroup.size <= DEEP_READ_MAX_CHANNELS,
             scope = groupChannelIds,
@@ -65,31 +66,43 @@ object SubscriptionRefreshPlanner {
         shown: Set<String>?,
         now: Long,
         force: Boolean = false,
+        maxChannels: Int? = null,
     ): SubscriptionRefreshPlan =
         plan(
             subscriptions = if (shown == null) subscriptions else subscriptions.filter { it.channelId in shown },
             now = now,
             force = force,
+            maxChannels = maxChannels,
         )
 
+    /**
+     * Which of [subscriptions] this refresh covers. With [maxChannels] set, only the stalest
+     * channels are covered, so a big list rotates through over successive refreshes instead of
+     * sweeping every channel in one cycle; without it every due channel is covered.
+     */
     fun plan(
         subscriptions: List<ChannelSubscription>,
         now: Long,
         ttlMs: Long = CHANNEL_FEED_TTL_MS,
         force: Boolean = false,
+        maxChannels: Int? = null,
     ): SubscriptionRefreshPlan {
         if (subscriptions.isEmpty()) return SubscriptionRefreshPlan.NOTHING_TO_DO
-        if (force) {
-            return SubscriptionRefreshPlan(
-                channelIds = subscriptions.map { it.channelId },
-                isFullRefresh = true,
-            )
-        }
-
-        val stale = subscriptions.filter { it.needsFeedRefresh(now, ttlMs) }
+        val due =
+            if (force) {
+                subscriptions
+            } else {
+                subscriptions.filter { it.needsFeedRefresh(now, ttlMs) }
+            }
+        val selected =
+            if (maxChannels != null && due.size > maxChannels) {
+                due.sortedBy { it.lastFeedFetchAt }.take(maxChannels)
+            } else {
+                due
+            }
         return SubscriptionRefreshPlan(
-            channelIds = stale.map { it.channelId },
-            isFullRefresh = stale.size == subscriptions.size,
+            channelIds = selected.map { it.channelId },
+            isFullRefresh = selected.size == subscriptions.size,
         )
     }
 
