@@ -92,10 +92,11 @@ class FamilyWhitelistRepository
         /**
          * Seeds the approved channels on first launch and mirrors them into subscriptions,
          * then merges in any seed channels added by a later round (tracked by [SEED_VERSION])
-         * so an existing install gains the new channels too. A channel the PIN holder removed
-         * is never re-added: the merge runs once per seed version, and it skips channels with
-         * an unsubscribe tombstone. A failed resolution (offline, renamed handle) keeps the
-         * handle entry, which still matches by handle; the next launch retries.
+         * so an existing install gains the new channels too, and prunes ids the seed dropped
+         * ([REMOVED_SEED_IDS]). A channel the PIN holder removed is never re-added: the merge
+         * runs once per seed version, and it skips channels with an unsubscribe tombstone. A
+         * failed resolution (offline, renamed handle) keeps the handle entry, which still
+         * matches by handle; the next launch retries.
          */
         suspend fun ensureSeeded() {
             val current = channels.first()
@@ -121,9 +122,19 @@ class FamilyWhitelistRepository
                                 (seed.handle.isNotBlank() && existing.handle.equals(seed.handle, ignoreCase = true))
                         }
                 }
-            if (missing.isNotEmpty()) {
-                save(current + missing)
-                mirrorSubscriptions(missing)
+            // Channels the seed dropped are pruned from the stored list, and their mirrored
+            // subscription is removed too. Only the ids in REMOVED_SEED_IDS are ever pruned,
+            // so a channel the PIN holder added themselves is never touched.
+            val pruned = current.filterNot { it.channelId.isNotBlank() && it.channelId in REMOVED_SEED_IDS }
+            val dropped = current.filter { it.channelId.isNotBlank() && it.channelId in REMOVED_SEED_IDS }
+            if (missing.isEmpty() && dropped.isEmpty()) {
+                setSeedVersion(SEED_VERSION)
+                return
+            }
+            save(pruned + missing)
+            mirrorSubscriptions(missing)
+            dropped.forEach { channel ->
+                runCatching { subscriptionRepository.unsubscribe(channel.channelId) }
             }
             setSeedVersion(SEED_VERSION)
         }
@@ -210,10 +221,12 @@ class FamilyWhitelistRepository
             val SEED_VERSION_KEY = intPreferencesKey("seed_version")
 
             /**
-             * Bump when [FAMILY_SEED_CHANNELS] gains channels: existing installs merge them in
-             * once. Round 3 bumped it again because run #24's head already carried version 2,
-             * so a merge keyed on 2 would skip the new channels on any install of that head.
+             * Bump when [FAMILY_SEED_CHANNELS] changes: existing installs merge added channels
+             * in once and prune ids listed in [REMOVED_SEED_IDS]. Round 3 bumped it again
+             * because run #24's head already carried version 2, so a merge keyed on 2 would
+             * skip the new channels on any install of that head. Round 4 bumped it to drop
+             * Press TV (bogus id).
              */
-            const val SEED_VERSION = 3
+            const val SEED_VERSION = 4
         }
     }
