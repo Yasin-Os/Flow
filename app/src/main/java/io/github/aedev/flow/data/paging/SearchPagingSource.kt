@@ -54,6 +54,7 @@ class SearchPagingSource(
     private suspend fun loadPages(params: LoadParams<String>): LoadResult<String, SearchResultItem> =
         try {
             val hidden = exclusions()
+            val queryMatchesTopic = hidden.familySearch?.matchesTopic(query) == true
             val results = mutableListOf<SearchResultItem>()
             var continuation = params.key
             var requests = 0
@@ -66,7 +67,7 @@ class SearchPagingSource(
                         page.toShortsResults(shortsEnabled)
                     } else {
                         page.toResultItems(shortsEnabled)
-                    }.withoutHidden(hidden)
+                    }.withoutHidden(hidden, queryMatchesTopic)
                 results +=
                     loadedItemKeys.filter(items.watchFiltered()) { it.identityKey() }
                 continuation = page.continuation
@@ -176,25 +177,51 @@ internal fun SearchResultsPage.toShortsResults(shortsEnabled: Boolean): List<Sea
  *
  * In the family app the whitelist joins too: only approved channels' videos and cards survive,
  * playlists (which carry no channel id) go, and a strip keeps only approved videos — a query
- * with no approved match ends on the empty state, never on outside results.
+ * with no approved match ends on the empty state, never on outside results. With a family
+ * search rule set, search is topic-scoped open instead: a non-whitelisted video survives when
+ * it is about an approved topic and passes the blocklist (see [FamilySearchRule]), and a
+ * channel card survives when its name or handle matches a topic. A kept card's "Latest from"
+ * strip is filtered by the same rule, so a blocked upload never rides along with the card.
+ * [queryMatchesTopic] is the query itself matching a topic, computed once per load: it relaxes
+ * the result-side topic gate to blocklist-only.
  */
-internal fun List<SearchResultItem>.withoutHidden(exclusions: FeedExclusions): List<SearchResultItem> {
+internal fun List<SearchResultItem>.withoutHidden(
+    exclusions: FeedExclusions,
+    queryMatchesTopic: Boolean = false,
+): List<SearchResultItem> {
     if (exclusions.isEmpty) return this
+    val familySearch = exclusions.familySearch
 
     return mapNotNull { item ->
         when (item) {
             is SearchResultItem.VideoResult -> {
-                item.takeUnless {
-                    exclusions.hides(it.video) || exclusions.hidesAsAi(it.video) ||
-                        (exclusions.family.isRestrictive && it.video.channelId.isBlank())
+                if (familySearch != null) {
+                    item.takeUnless {
+                        exclusions.hidesFromSearch(it.video, queryMatchesTopic) ||
+                            exclusions.hidesAsAi(it.video) ||
+                            (exclusions.family.isRestrictive && it.video.channelId.isBlank())
+                    }
+                } else {
+                    item.takeUnless {
+                        exclusions.hides(it.video) || exclusions.hidesAsAi(it.video) ||
+                            (exclusions.family.isRestrictive && it.video.channelId.isBlank())
+                    }
                 }
             }
 
             is SearchResultItem.ChannelResult -> {
                 exclusions.ai.learn(item.channel.id, item.channel.handle)
-                item.takeUnless {
-                    exclusions.hidesChannel(it.channel.id) ||
-                        (exclusions.family.isRestrictive && !exclusions.family.allows(it.channel.id, it.channel.handle))
+                if (familySearch != null) {
+                    val keptLatest =
+                        item.latestVideos.filter { familySearch.keepsVideo(it, queryMatchesTopic) }
+                    item.copy(latestVideos = keptLatest).takeUnless {
+                        exclusions.hidesChannelFromSearch(it.channel)
+                    }
+                } else {
+                    item.takeUnless {
+                        exclusions.hidesChannel(it.channel.id) ||
+                            (exclusions.family.isRestrictive && !exclusions.family.allows(it.channel.id, it.channel.handle))
+                    }
                 }
             }
 
@@ -205,7 +232,14 @@ internal fun List<SearchResultItem>.withoutHidden(exclusions: FeedExclusions): L
             }
 
             is SearchResultItem.ShelfResult -> {
-                val videos = item.videos.filterNot { exclusions.hides(it) || exclusions.hidesAsAi(it) }
+                val videos =
+                    if (familySearch != null) {
+                        item.videos.filterNot {
+                            exclusions.hidesFromSearch(it, queryMatchesTopic) || exclusions.hidesAsAi(it)
+                        }
+                    } else {
+                        item.videos.filterNot { exclusions.hides(it) || exclusions.hidesAsAi(it) }
+                    }
                 when {
                     videos.isNotEmpty() -> item.copy(videos = videos)
                     item.posts.isNotEmpty() && !exclusions.family.isRestrictive -> item
