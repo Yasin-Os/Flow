@@ -104,7 +104,12 @@ class SubscriptionFeedRepository
             val subscriptions = subscriptionRepository.getAllSubscriptions().first()
             val now = System.currentTimeMillis()
             return if (scope == null) {
-                SubscriptionRefreshPlanner.plan(subscriptions, now, force, maxChannels = familyRefreshBudget())
+                SubscriptionRefreshPlanner.plan(
+                    subscriptions = subscriptions,
+                    now = now,
+                    force = force,
+                    maxChannels = familyRefreshBudget(),
+                )
             } else {
                 SubscriptionRefreshPlanner.planForGroup(subscriptions, scope, now, force, maxChannels = familyRefreshBudget())
             }
