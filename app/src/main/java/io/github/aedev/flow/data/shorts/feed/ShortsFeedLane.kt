@@ -36,6 +36,12 @@ data class ShortsFeedProfile(
  * Everything a reel must not be to reach the page. Read once per page. The id sets cover every
  * lane; [isBlockedText] can only judge reels that carry a title, so id-only reels from the
  * sequence chains are judged again when their `/player` response names them.
+ *
+ * [isAllowedChannel] is the family whitelist: a reel from a channel it does not allow never
+ * reaches the page. It takes only an id — reels carry no handle — so a whitelisted channel
+ * whose id has not been resolved yet cannot match here; resolution happens at startup.
+ * [familyMode] skips the non-subscription lane refills entirely, so the feed never fetches
+ * reels it would only drop.
  */
 data class ShortsFeedFilters(
     val watchedIds: Set<String> = emptySet(),
@@ -44,4 +50,6 @@ data class ShortsFeedFilters(
     val excludedChannelIds: Set<String> = emptySet(),
     val isBlockedText: (title: String, channelName: String) -> Boolean = { _, _ -> false },
     val isAiBlocked: (channelId: String) -> Boolean = { false },
+    val isAllowedChannel: (channelId: String) -> Boolean = { true },
+    val familyMode: Boolean = false,
 )

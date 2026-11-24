@@ -24,6 +24,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -55,11 +56,15 @@ internal class HomeFeedLoader(
     private val enricher: HomeChannelEnricher,
     private val wave2: HomeWave2Discovery,
     private val lateMerges: HomeLateMerges,
+    private val familyMode: Boolean = false,
     private val onRefreshFailed: () -> Unit,
 ) {
     private companion object {
         const val MAX_RELATED_SEEDS = 4
         const val SNAPSHOT_FEED_DEBOUNCE_MS = 2_000L
+
+        // How long the first launch waits for the subscription refresh before painting the feed.
+        const val FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS = 30_000L
 
         // Trace section the Home refresh benchmark reads (#1301).
         const val TRACE_WAVE1 = "home.wave1"
@@ -130,8 +135,11 @@ internal class HomeFeedLoader(
                     session.discoveryQueries.clear()
                     session.searchPages.reset()
                     // A refresh restarts the discovery tree at its roots (broad pass);
-                    // load-more regenerations then dig deeper per cluster.
-                    session.discoveryQueries.addAll(FlowNeuroEngine.generateDiscoveryQueries(resetDepth = true))
+                    // load-more regenerations then dig deeper per cluster. The family app
+                    // has no discovery pool: only approved channels' uploads reach the feed.
+                    if (!familyMode) {
+                        session.discoveryQueries.addAll(FlowNeuroEngine.generateDiscoveryQueries(resetDepth = true))
+                    }
                     session.currentQueryIndex = 0
 
                     val userSubs = session.subscriptionScope().boosted
@@ -143,37 +151,46 @@ internal class HomeFeedLoader(
                     val wave1Queries = session.discoveryQueries.take(wave1QueryCount)
                     session.currentQueryIndex = wave1QueryCount
 
+                    // The family app fetches no discovery or related pool: the feed is the
+                    // approved channels' uploads, and the exclusions filter the rest as a net.
                     val results =
-                        traced(TRACE_WAVE1) {
-                            supervisorScope {
-                                val deferredDiscovery =
-                                    async {
-                                        wave1Queries
-                                            .map { query ->
-                                                async {
-                                                    query to
-                                                        runCatching {
-                                                            withTimeoutOrNull(
-                                                                HOME_SEARCH_TIMEOUT_MS,
-                                                            ) { session.searchPages.firstPage(query) }
-                                                        }.getOrNull().orEmpty()
-                                                }
-                                            }.awaitAll()
-                                    }
+                        if (familyMode) {
+                            Wave1FeedResults(
+                                discovery = emptyList(),
+                                related = RelatedGraphFetchResult(emptyList(), emptyList(), emptyList(), emptyMap()),
+                            )
+                        } else {
+                            traced(TRACE_WAVE1) {
+                                supervisorScope {
+                                    val deferredDiscovery =
+                                        async {
+                                            wave1Queries
+                                                .map { query ->
+                                                    async {
+                                                        query to
+                                                            runCatching {
+                                                                withTimeoutOrNull(
+                                                                    HOME_SEARCH_TIMEOUT_MS,
+                                                                ) { session.searchPages.firstPage(query) }
+                                                            }.getOrNull().orEmpty()
+                                                    }
+                                                }.awaitAll()
+                                        }
 
-                                // ── Related-graph lane: harvest /next neighbours of recent positives ──
-                                val deferredRelated =
-                                    async {
-                                        val seedInputs = feedSources.historySeedInputs()
-                                        val longTermInputs = feedSources.longTermSeedInputs()
-                                        val seedIds = FlowNeuroEngine.selectRelatedSeeds(seedInputs, MAX_RELATED_SEEDS, longTermInputs)
-                                        feedSources.fetchRelatedGraph(seedInputs + longTermInputs, seedIds, session::cacheFilters)
-                                    }
+                                    // ── Related-graph lane: harvest /next neighbours of recent positives ──
+                                    val deferredRelated =
+                                        async {
+                                            val seedInputs = feedSources.historySeedInputs()
+                                            val longTermInputs = feedSources.longTermSeedInputs()
+                                            val seedIds = FlowNeuroEngine.selectRelatedSeeds(seedInputs, MAX_RELATED_SEEDS, longTermInputs)
+                                            feedSources.fetchRelatedGraph(seedInputs + longTermInputs, seedIds, session::cacheFilters)
+                                        }
 
-                                Wave1FeedResults(
-                                    discovery = deferredDiscovery.await(),
-                                    related = deferredRelated.await(),
-                                )
+                                    Wave1FeedResults(
+                                        discovery = deferredDiscovery.await(),
+                                        related = deferredRelated.await(),
+                                    )
+                                }
                             }
                         }
 
@@ -207,12 +224,28 @@ internal class HomeFeedLoader(
                     val exclusions = session.feedExclusions()
                     // Subscriptions come from the store, which is local: the network top-up runs
                     // after first paint and never holds the feed back.
-                    val storedFeed =
+                    var storedFeed =
                         if (userSubs.isEmpty()) {
                             emptyList()
                         } else {
                             runCatching { subscriptionFeedRepository.observeFeed().first() }.getOrDefault(emptyList())
                         }
+                    // In family mode the feed is the approved channels' uploads, and on a fresh
+                    // install the store is empty: the first paint would be a black screen. Run the
+                    // subscription refresh first and wait for it (bounded), so the lanes build from
+                    // real uploads. Later launches keep the cached path: a non-empty store skips
+                    // the wait. The timeout abandons the rest of the sweep; the channels it did
+                    // not reach stay stale for the next cycle.
+                    if (familyMode && userSubs.isNotEmpty() && storedFeed.isEmpty()) {
+                        runCatching {
+                            withTimeoutOrNull(FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS) {
+                                val plan = subscriptionFeedRepository.planRefresh(force = false)
+                                subscriptionFeedRepository.refresh(plan).collect { }
+                            }
+                        }
+                        storedFeed =
+                            runCatching { subscriptionFeedRepository.observeFeed().first() }.getOrDefault(emptyList())
+                    }
                     val feedShorts =
                         (storedFeed.storedSubscriptionReels(now) + rawDiscovery.extractShorts())
                             .distinctBy { it.id }
@@ -234,16 +267,26 @@ internal class HomeFeedLoader(
                     val watched = session.watchedVideoIds.value
                     // Cached uploads only: the network refresh runs after first paint.
                     val rawMemory = runCatching { channelMemory.storedUploads(now) }.getOrDefault(emptyList())
+                    // No neighbour channels in the family app: only approved channels appear.
                     val neighbours =
-                        runCatching {
-                            val followed =
-                                subscriptionRepository.getAllSubscriptions().first().associate {
-                                    it.channelId to
-                                        it.channelName
-                                }
-                            neighbourChannels.neighbours(followed, now)
-                        }.getOrDefault(emptyList())
-                    val rawNeighbours = runCatching { neighbourChannels.storedUploads(neighbours, now) }.getOrDefault(emptyList())
+                        if (familyMode) {
+                            emptyList()
+                        } else {
+                            runCatching {
+                                val followed =
+                                    subscriptionRepository.getAllSubscriptions().first().associate {
+                                        it.channelId to
+                                            it.channelName
+                                    }
+                                neighbourChannels.neighbours(followed, now)
+                            }.getOrDefault(emptyList())
+                        }
+                    val rawNeighbours =
+                        if (familyMode) {
+                            emptyList()
+                        } else {
+                            runCatching { neighbourChannels.storedUploads(neighbours, now) }.getOrDefault(emptyList())
+                        }
                     val trace = if (snapshotRecorder.isRecording()) RankTrace() else null
                     session.snapshotTrace = trace
                     if (trace == null) snapshotFeedJob?.cancel()
@@ -262,9 +305,30 @@ internal class HomeFeedLoader(
                             now = now,
                             freshSlotTarget = dynamicFreshSubSlots(userSubs.size),
                             subAvatarMap = subAvatarMap,
-                            rank = { pool -> FlowNeuroEngine.rank(pool, userSubs, trace = trace) },
+                            // The family feed is newest first: no Neuro ranking, so no
+                            // recommendation work runs at all in family mode.
+                            rank = { pool ->
+                                if (familyMode) {
+                                    pool.sortedByDescending { it.timestamp }
+                                } else {
+                                    FlowNeuroEngine.rank(
+                                        pool,
+                                        userSubs,
+                                        trace = trace,
+                                    )
+                                }
+                            },
                             rankRelevant = { pool ->
-                                FlowNeuroEngine.rank(pool, userSubs, NeuroScoring.LANE_RELEVANCE_FLOOR, trace)
+                                if (familyMode) {
+                                    pool.sortedByDescending { it.timestamp }
+                                } else {
+                                    FlowNeuroEngine.rank(
+                                        pool,
+                                        userSubs,
+                                        NeuroScoring.LANE_RELEVANCE_FLOOR,
+                                        trace,
+                                    )
+                                }
                             },
                             share = FlowNeuroEngine::shareByInterest,
                             rawNeighbours = rawNeighbours,
@@ -395,15 +459,28 @@ internal class HomeFeedLoader(
                             }
                         }
 
-                    // Enrich (post-paint) with related neighbours of saved/watched videos.
-                    lateMerges.enrichFeedWithSavedInterest(userSubs, taste)
+                    // No saved-interest enrichment in the family app: it fetches related
+                    // neighbours of saved/watched videos, which is recommendation work.
+                    if (!familyMode) {
+                        lateMerges.enrichFeedWithSavedInterest(userSubs, taste)
+                    }
 
-                    wave2.startWave2Discovery(finalMix, userSubs, taste)
+                    // No second discovery wave and no neighbour refresh in the family app:
+                    // there is no discovery pool to deepen and no neighbour channel to follow.
+                    if (!familyMode) {
+                        wave2.startWave2Discovery(finalMix, userSubs, taste)
+                    }
                     lateMerges.startSubscriptionTopUp(userSubs, storedFeed)
                     lateMerges.startChannelMemoryRefresh(userSubs)
-                    val offTopicNeighbours = rawNeighbours.map { it.channelId }.toSet() - lanes.relevantNeighbourChannels
-                    lateMerges.startNeighbourRefresh(neighbours, offTopicNeighbours, storedFeed, userSubs)
-                    chipFeeds.refreshChips()
+                    if (!familyMode) {
+                        val offTopicNeighbours = rawNeighbours.map { it.channelId }.toSet() - lanes.relevantNeighbourChannels
+                        lateMerges.startNeighbourRefresh(neighbours, offTopicNeighbours, storedFeed, userSubs)
+                    }
+                    // No chips in the family app: the chip row is hidden, so there is
+                    // nothing to refresh.
+                    if (!familyMode) {
+                        chipFeeds.refreshChips()
+                    }
                 } catch (cancellation: CancellationException) {
                     throw cancellation
                 } catch (e: Exception) {

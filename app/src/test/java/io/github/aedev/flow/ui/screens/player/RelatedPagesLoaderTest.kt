@@ -67,40 +67,28 @@ class RelatedPagesLoaderTest {
     }
 
     @Test
-    fun `a page in flight is asked for once however often the end is reached`() =
+    fun `family mode never pages the related lane however often the end is reached`() =
         runTest(dispatcher) {
-            val pending = CompletableDeferred<WatchRelatedPage?>()
-            coEvery { pages.nextPage("t1") } coAnswers { pending.await() }
-
             repeat(3) { loader.loadMore("playing") }
             advanceUntilIdle()
-            assertThat(uiState.value.relatedAppend).isEqualTo(RelatedAppend.LOADING)
 
-            pending.complete(WatchRelatedPage(listOf(video("c")), continuation = "t2"))
-            advanceUntilIdle()
-
-            coVerify(exactly = 1) { pages.nextPage("t1") }
-            assertThat(uiState.value.relatedContinuation).isEqualTo("t2")
+            coVerify(exactly = 0) { pages.nextPage(any()) }
+            assertThat(uiState.value.relatedVideos.map { it.id }).containsExactly("a", "b").inOrder()
+            assertThat(uiState.value.relatedContinuation).isEqualTo("t1")
             assertThat(uiState.value.relatedAppend).isEqualTo(RelatedAppend.IDLE)
         }
 
     @Test
-    fun `a page appends only the videos the lane does not list yet and extends autoplay`() =
+    fun `family mode leaves the related lane untouched and sets no autoplay candidates`() =
         runTest(dispatcher) {
-            shortsEnabled = false
-            coEvery { pages.nextPage("t1") } returns
-                WatchRelatedPage(
-                    videos = listOf(video("b"), video("c"), video("playing"), video("short", isShort = true), video("d")),
-                    continuation = null,
-                )
-
             loader.loadMore("playing")
             advanceUntilIdle()
 
-            val lane = uiState.value.relatedVideos.map { it.id }
-            assertThat(lane).containsExactly("a", "b", "c", "d").inOrder()
-            assertThat(uiState.value.relatedContinuation).isNull()
-            verify { playerManager.setAutoplayCandidates("playing", uiState.value.relatedVideos, true) }
+            assertThat(uiState.value.relatedVideos.map { it.id }).containsExactly("a", "b").inOrder()
+            assertThat(uiState.value.relatedContinuation).isEqualTo("t1")
+            assertThat(uiState.value.relatedAppend).isEqualTo(RelatedAppend.IDLE)
+            coVerify(exactly = 0) { pages.nextPage(any()) }
+            verify(exactly = 0) { playerManager.setAutoplayCandidates(any(), any(), any()) }
         }
 
     @Test
@@ -131,22 +119,19 @@ class RelatedPagesLoaderTest {
         }
 
     @Test
-    fun `a failed page waits for a retry instead of asking again`() =
+    fun `family mode never asks for a related page, so there is nothing to retry`() =
         runTest(dispatcher) {
-            coEvery { pages.nextPage("t1") } returns null
-
             loader.loadMore("playing")
             advanceUntilIdle()
 
-            assertThat(uiState.value.relatedAppend).isEqualTo(RelatedAppend.FAILED)
+            assertThat(uiState.value.relatedAppend).isEqualTo(RelatedAppend.IDLE)
             assertThat(uiState.value.relatedContinuation).isEqualTo("t1")
 
-            coEvery { pages.nextPage("t1") } returns WatchRelatedPage(listOf(video("c")))
             loader.loadMore("playing")
             advanceUntilIdle()
 
-            coVerify(exactly = 2) { pages.nextPage("t1") }
-            assertThat(uiState.value.relatedVideos.map { it.id }).containsExactly("a", "b", "c").inOrder()
+            coVerify(exactly = 0) { pages.nextPage(any()) }
+            assertThat(uiState.value.relatedVideos.map { it.id }).containsExactly("a", "b").inOrder()
         }
 
     private fun video(

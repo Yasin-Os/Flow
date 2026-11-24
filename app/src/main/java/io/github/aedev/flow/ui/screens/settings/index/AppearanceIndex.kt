@@ -1,6 +1,7 @@
 package io.github.aedev.flow.ui.screens.settings.index
 
 import io.github.aedev.flow.R
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.ui.components.settings.SettingAvailability
 import io.github.aedev.flow.ui.components.settings.SettingEntry
 import io.github.aedev.flow.ui.components.settings.SettingsDestination
@@ -353,8 +354,10 @@ internal object NavigationBarIndex {
             destination = page,
         )
 
-    val all =
-        listOf(
+    // The family app has no Music tab and no main search, so their toggles are not on the
+    // Navigation Bar page either — and settings search must not point at them.
+    val all: List<SettingEntry> =
+        listOfNotNull(
             style,
             labels,
             scroll,
@@ -363,8 +366,8 @@ internal object NavigationBarIndex {
             iconPop,
             home,
             shorts,
-            music,
-            search,
+            if (FamilyMode.ENABLED) null else music,
+            if (FamilyMode.ENABLED) null else search,
             explore,
             downloads,
             hideOnScroll,

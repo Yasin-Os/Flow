@@ -4,6 +4,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.ChannelSubscription
 import io.github.aedev.flow.data.local.SubscriptionRepository
 import io.github.aedev.flow.data.local.notifyingIds
@@ -114,6 +115,11 @@ internal class DiscoverChannelsViewModel
                 .debounce(SEARCH_DEBOUNCE_MS)
                 .flatMapLatest { typed ->
                     if (typed.isBlank()) {
+                        flowOf(emptyList())
+                    } else if (FamilyMode.textMatcher().blocksQuery(typed.trim())) {
+                        // A blocked word never searches: the family app refuses it outright
+                        // (the strict gate — no topic relaxation here, this search is
+                        // channels-only).
                         flowOf(emptyList())
                     } else {
                         flow {

@@ -19,6 +19,10 @@ import android.content.Context
 import android.content.res.Configuration
 import android.util.Log
 import io.github.aedev.flow.data.contentfilter.aislist.AiListMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannelMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilySearchRule
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.utils.traced
@@ -68,6 +72,10 @@ class FlowNeuroEngine internal constructor(
     private val coWatchStore: NeuroCoWatchStore = NeuroCoWatchStore(appContext),
     learningPaused: (suspend () -> Boolean)? = null,
     private val rankRandom: java.util.Random? = null,
+    // Family gates as providers, so they re-resolve once the repositories load; tests pass
+    // allow-all providers because ranking tests measure ranking, not the family gates.
+    private val familyChannelMatcher: () -> FamilyChannelMatcher = { FamilyMode.channelMatcher() },
+    private val familyTextMatcher: () -> FamilyTextMatcher = { FamilyMode.textMatcher() },
 ) {
     constructor(appContext: Context) : this(appContext, NeuroStorage(appContext), NeuroContentStore(appContext))
 
@@ -1882,7 +1890,12 @@ class FlowNeuroEngine internal constructor(
                     .keys
         }
 
-    /** The blocked topics as one text test, for feed paths whose reels never pass through [rank]. */
+    /**
+     * The blocked topics as one text test, for feed paths whose reels never pass through [rank].
+     * The family hard tier joins it: it needs no channel, so it applies here too. The
+     * entertainment tier cannot — it needs the channel id to exempt whitelisted channels — and
+     * lives in [feedExclusions] and [rankTraced] instead.
+     */
     suspend fun blockedContentMatcher(): (title: String, channelName: String) -> Boolean {
         val matchers =
             withBrainLock {
@@ -1892,8 +1905,12 @@ class FlowNeuroEngine internal constructor(
                     tokenizer::keyOf,
                 )
             }
-        if (matchers.isEmpty()) return { _, _ -> false }
-        return { title, channelName -> NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf) }
+        val familyText = familyTextMatcher()
+        if (matchers.isEmpty() && familyText.isEmpty) return { _, _ -> false }
+        return { title, channelName ->
+            (!matchers.isEmpty() && NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)) ||
+                familyText.blocksHard("$title\n$channelName")
+        }
     }
 
     /** The same suppression windows [rank] applies; the topic matchers are built only if a caller asks. */
@@ -1903,6 +1920,8 @@ class FlowNeuroEngine internal constructor(
         val matchers by lazy {
             NeuroScoring.buildBlockedMatchers(brain.blockedTopics, NeuroTopicCatalog.TOPIC_CATEGORIES, tokenizer::keyOf)
         }
+        val familyChannels = familyChannelMatcher()
+        val familyText = familyTextMatcher()
         return FeedExclusions(
             suppressedVideoIds = brain.suppressedVideoIds.keys,
             blockedChannelIds = brain.blockedChannels,
@@ -1912,6 +1931,18 @@ class FlowNeuroEngine internal constructor(
                     NeuroScoring.isBlockedByText(title, channelName, matchers, tokenizer::keyOf)
             },
             ai = aiListMatcher(),
+            family = familyChannels,
+            familyText = familyText,
+            // Open search is topic-scoped, not whitelist-only: the search rule rides along
+            // whenever the whitelist is restrictive, so search can keep non-whitelisted videos
+            // about approved topics. Ranked surfaces keep using hides(), which stays
+            // whitelist-only.
+            familySearch =
+                if (familyChannels.isRestrictive) {
+                    FamilySearchRule(familyChannels, familyText)
+                } else {
+                    null
+                },
         )
     }
 
@@ -2137,6 +2168,8 @@ class FlowNeuroEngine internal constructor(
 
             // Pre-filter blocked content
             val aiList = aiListMatcher()
+            val familyChannels = familyChannelMatcher()
+            val familyText = familyTextMatcher()
             val filtered =
                 candidates.filter { video ->
                     if (video.id in activeSuppressedVideos) return@filter false
@@ -2145,6 +2178,10 @@ class FlowNeuroEngine internal constructor(
                         return@filter false
                     }
                     if (aiList.blocks(video)) return@filter false
+                    if (!familyChannels.allows(video.channelId, video.channelHandle)) return@filter false
+                    if (familyText.blocks(video.title, video.description, video.channelId, video.channelHandle, familyChannels)) {
+                        return@filter false
+                    }
                     !NeuroScoring.isBlockedByText(
                         video.title,
                         video.channelName,
@@ -2388,6 +2425,11 @@ class FlowNeuroEngine internal constructor(
         interactionType: InteractionType,
         percentWatched: Float = 0f,
     ) {
+        // In family mode, videos from channels outside the whitelist are not learned from:
+        // ranking is skipped, so their topics would only pollute the taste profile. Whitelisted
+        // channels keep learning; local media has no channel id and passes, since it cannot be
+        // attributed to an outside channel.
+        if (FamilyMode.ENABLED && !familyChannelMatcher().allows(video.channelId, video.channelHandle)) return
         // Deep Flow mode: freeze vector learning while active and not yet expired
         if (isLearningPaused()) return
 
@@ -2985,6 +3027,10 @@ class FlowNeuroEngine internal constructor(
      * A typed search is the most explicit interest statement in the product.
      * Records explicit topic evidence and plants the query's phrase-level topics
      * (see NeuroSearchLearning) without counting as a full interaction.
+     *
+     * This stays on in family mode: ranking is skipped there, so the learned
+     * profile is never read for recommendations, and the guard on video
+     * learning is what keeps non-whitelisted videos out of the profile.
      */
     suspend fun onSearchQuery(rawQuery: String) {
         if (rawQuery.isBlank() || isLearningPaused()) return

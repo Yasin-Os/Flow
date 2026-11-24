@@ -48,7 +48,10 @@ class BackupRulesTest {
             "file:profile_library",
         )
 
-    /** Stores that belong to this install: the engine, sync, secrets, queues, widgets and caches. */
+    /**
+     * Stores that belong to this install: the engine, sync, secrets, queues, widgets, caches
+     * and the family filter state (approved channels, parent-added blocked words).
+     */
     private val installOnly =
         setOf(
             "flow_neuro_brain_v7.json",
@@ -60,6 +63,8 @@ class BackupRulesTest {
             "flow_neuro_cowatch_v1.json",
             "flow_neuro_neighbours_v1.json",
             "flow_blocked_channel_names_v1.json",
+            "family_blocklist",
+            "family_whitelist",
             "flow_music_brain_v1.json",
             "sync_identity",
             "linked_device",

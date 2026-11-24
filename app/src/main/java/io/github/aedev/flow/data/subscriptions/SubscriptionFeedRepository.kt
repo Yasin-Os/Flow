@@ -2,6 +2,7 @@ package io.github.aedev.flow.data.subscriptions
 
 import android.util.Log
 import androidx.room.withTransaction
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.innertube.RssSubscriptionService
 import io.github.aedev.flow.data.innertube.SubscriptionRefreshStage
 import io.github.aedev.flow.data.local.AppDatabase
@@ -103,9 +104,14 @@ class SubscriptionFeedRepository
             val subscriptions = subscriptionRepository.getAllSubscriptions().first()
             val now = System.currentTimeMillis()
             return if (scope == null) {
-                SubscriptionRefreshPlanner.plan(subscriptions = subscriptions, now = now, force = force)
+                SubscriptionRefreshPlanner.plan(
+                    subscriptions = subscriptions,
+                    now = now,
+                    force = force,
+                    maxChannels = familyRefreshBudget(),
+                )
             } else {
-                SubscriptionRefreshPlanner.planForGroup(subscriptions, scope, now, force)
+                SubscriptionRefreshPlanner.planForGroup(subscriptions, scope, now, force, maxChannels = familyRefreshBudget())
             }
         }
 
@@ -119,8 +125,21 @@ class SubscriptionFeedRepository
                     hiddenGroups = playerPreferences.subscriptionHiddenGroups.first(),
                     groupsOutOfAll = playerPreferences.subscriptionGroupsOutOfAll.first(),
                 )
-            return SubscriptionRefreshPlanner.planForAll(subscriptions, shown, System.currentTimeMillis(), force)
+            return SubscriptionRefreshPlanner.planForAll(
+                subscriptions,
+                shown,
+                System.currentTimeMillis(),
+                force,
+                maxChannels = familyRefreshBudget(),
+            )
         }
+
+        /**
+         * In family mode a refresh covers only the stalest slice of the seed, so a routine cycle
+         * never sweeps all 243 channels at once; the oldest-first order rotates the rest in.
+         * Outside family mode there is no cap.
+         */
+        private fun familyRefreshBudget(): Int? = FAMILY_REFRESH_MAX_CHANNELS.takeIf { FamilyMode.ENABLED }
 
         /**
          * Runs [plan] and writes the result. Emits a progressively more complete feed so the caller
@@ -450,6 +469,9 @@ class SubscriptionFeedRepository
             const val SUBSCRIPTION_FEED_LOOKBACK_DAYS = 60L
             const val SUBSCRIPTION_CACHE_WINDOW_MS = SUBSCRIPTION_FEED_LOOKBACK_DAYS * 24L * 60L * 60L * 1000L
             const val MAX_ROWS_PER_CHANNEL = 60
+
+            /** Channels a single refresh covers in family mode: a quarter of the 243-channel seed. */
+            const val FAMILY_REFRESH_MAX_CHANNELS = 60
 
             /** A group read binds every id twice; this keeps it inside SQLite's 999 variables. */
             const val SCOPED_READ_MAX_CHANNELS = 400

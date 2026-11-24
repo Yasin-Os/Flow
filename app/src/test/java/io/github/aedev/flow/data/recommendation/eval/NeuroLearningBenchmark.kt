@@ -7,6 +7,8 @@
 
 package io.github.aedev.flow.data.recommendation.eval
 
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannelMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.recommendation.FlowNeuroEngine
 import io.github.aedev.flow.data.recommendation.IdfSnapshot
@@ -335,9 +337,19 @@ internal object NeuroLearningBenchmark {
             mockk(relaxed = true) {
                 every { topicsFor(any()) } returns null
             }
-        return FlowNeuroEngine(mockk(relaxed = true), storage, contentStore, categoryStore, coWatchStore, learningPaused = {
-            false
-        }, rankRandom = random)
+        // Ranking benchmarks measure ranking, so the family gates stay out of them — they
+        // have their own tests — and the engine ranks with no whitelist here.
+        return FlowNeuroEngine(
+            mockk(relaxed = true),
+            storage,
+            contentStore,
+            categoryStore,
+            coWatchStore,
+            learningPaused = { false },
+            rankRandom = random,
+            familyChannelMatcher = { FamilyChannelMatcher.ALLOW_ALL },
+            familyTextMatcher = { FamilyTextMatcher.EMPTY },
+        )
     }
 
     val NO_JITTER: java.util.Random =

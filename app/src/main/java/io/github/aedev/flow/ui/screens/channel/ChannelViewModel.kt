@@ -11,6 +11,8 @@ import io.github.aedev.flow.data.community.PostCommentsLoader
 import io.github.aedev.flow.data.contentfilter.aislist.AiListRepository
 import io.github.aedev.flow.data.contentfilter.aislist.AiVerdict
 import io.github.aedev.flow.data.contentfilter.aislist.AllowedAiChannel
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilySearchRule
 import io.github.aedev.flow.data.engagement.HiddenContentStore
 import io.github.aedev.flow.data.local.ChannelSubscription
 import io.github.aedev.flow.data.local.PlayerPreferences
@@ -145,7 +147,22 @@ class ChannelViewModel
         internal val communityUiState: StateFlow<ChannelCommunityUiState> = communityController.state
         val postComments = PostCommentsLoader(viewModelScope)
 
-        private val tabController = ChannelTabController(viewModelScope, hiddenContent.hidden)
+        /** The open-search rule for this channel's tabs and in-channel search, or null. */
+        private fun familySearchRule(): FamilySearchRule? {
+            val channels = FamilyMode.channelMatcher()
+            return if (channels.isRestrictive) {
+                FamilySearchRule(channels, FamilyMode.textMatcher())
+            } else {
+                null
+            }
+        }
+
+        private val tabController =
+            ChannelTabController(
+                viewModelScope,
+                hiddenContent.hidden,
+                familySearch = { familySearchRule() },
+            )
         internal val tabStates: StateFlow<Map<ChannelTabKind, ChannelTabState>> =
             combine(tabController.states, playerPreferences.shortsContentEnabled) { states, shortsEnabled ->
                 if (shortsEnabled) states else states.mapValues { (_, state) -> state.copy(sections = state.sections.withoutShorts()) }
@@ -400,9 +417,18 @@ class ChannelViewModel
                 currentCoroutineContext().ensureActive()
                 result.fold(
                     onSuccess = { page ->
+                        // The same open-search rule as the channel's tabs: a non-whitelisted
+                        // channel's in-channel results keep only videos about approved topics.
+                        // A blocked query yields no results, rather than a blocked message.
+                        val rule = familySearchRule()
+                        val queryMatchesTopic = rule?.matchesTopic(trimmed) == true
+                        val videos =
+                            page.videos.distinctByNonBlankKey(Video::id).filter { video ->
+                                rule?.keepsVideo(video, queryMatchesTopic) ?: true
+                            }
                         _uiState.update {
                             it.copy(
-                                searchResults = page.videos.distinctByNonBlankKey(Video::id),
+                                searchResults = videos,
                                 searchContinuation = page.continuation,
                                 isSearching = false,
                                 searchErrorLog = null,

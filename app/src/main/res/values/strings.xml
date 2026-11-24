@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Flow</string>
-    <string name="app_launcher_name" translatable="false">Flow</string>
+    <string name="app_name">YouTube</string>
+    <string name="app_launcher_name" translatable="false">YouTube</string>
     <string name="subscriptions_search_placeholder">Search subscriptions ...</string>
     <string name="subscriptions_sort_label">Sort channels</string>
     <string name="subscriptions_sort_default">Default</string>
@@ -631,7 +631,7 @@
     <string name="channel_links">Links</string>
     <string name="artist">Artist</string>
     <string name="playlist">Playlist</string>
-    <string name="app_name_uppercase">FLOW</string>
+    <string name="app_name_uppercase">YOUTUBE</string>
     <string name="notification_badge_9_plus">9+</string>
     <string name="personalized_feed">Your personalized feed</string>
     <plurals name="videos_curated_template">
@@ -5337,6 +5337,37 @@
     <string name="session_lyric_repeated">%1$s (x%2$d)</string>
     <string name="settings_security_title">Security</string>
     <string name="settings_security_summary">App lock</string>
+    <!-- Family area: approved channels, blocked words and the family PIN. -->
+    <string name="family_settings_title">Family</string>
+    <string name="family_settings_summary">Approved channels, blocked words and the family PIN</string>
+    <string name="family_pin_setup_body">Set a PIN to protect the family settings. Only the PIN holder can add or remove approved channels and blocked words.</string>
+    <string name="family_pin_entry_body">Enter the family PIN to manage approved channels and blocked words.</string>
+    <string name="family_pin_label">PIN</string>
+    <string name="family_pin_confirm_label">Confirm PIN</string>
+    <string name="family_pin_set_button">Set PIN</string>
+    <string name="family_pin_unlock_button">Unlock</string>
+    <string name="family_pin_invalid">The PIN must be 4 to 6 digits.</string>
+    <string name="family_pin_mismatch">The PINs do not match.</string>
+    <string name="family_pin_wrong">Wrong PIN. Try again.</string>
+    <string name="family_pin_locked">Too many wrong PINs. Try again in a minute.</string>
+    <string name="family_channels_header">Approved channels</string>
+    <string name="family_channels_empty">No approved channels yet. Search below to add one.</string>
+    <string name="family_channel_remove">Remove</string>
+    <string name="family_channel_remove_item">Remove %1$s</string>
+    <string name="family_search_placeholder">Search channels, e.g. গজল</string>
+    <string name="family_search_blocked">That search is blocked in the family app.</string>
+    <string name="family_search_failed">Search failed. Check the connection and try again.</string>
+    <string name="family_search_add">Add</string>
+    <string name="family_search_added">Added</string>
+    <string name="family_search_add_item">Add %1$s to approved channels</string>
+    <string name="family_words_header">Extra blocked words</string>
+    <string name="family_words_footer">These words also block non-approved videos and searches, like the built-in list.</string>
+    <string name="family_word_add_hint">Add a word to block</string>
+    <string name="family_word_add_button">Add</string>
+    <string name="family_word_remove">Remove</string>
+    <string name="family_word_remove_item">Remove %1$s from blocked words</string>
+    <string name="family_blocked_video">Blocked in the family app</string>
+    <string name="family_blocked_video_hint">This video’s category is not allowed here. Only approved channels play in the family app.</string>
     <string name="settings_keywords_security">app lock, privacy, password, PIN, pattern, fingerprint, face, biometric, recent apps</string>
     <string name="app_lock_title">App lock</string>
     <string name="app_lock_summary">Ask for your phone\'s unlock to open Flow</string>

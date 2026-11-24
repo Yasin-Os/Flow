@@ -2,6 +2,8 @@ package io.github.aedev.flow.ui.screens.player
 
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.R
+import io.github.aedev.flow.data.contentfilter.family.FamilyChannelMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.VideoQuality
 import io.github.aedev.flow.data.model.SponsorBlockSegment
 import io.github.aedev.flow.data.model.Video
@@ -357,19 +359,41 @@ class PlaybackSessionApplierTest {
         runTest(testDispatcher) {
             val watched = video(VIDEO_ID).copy(channelId = "UC_real", channelThumbnailUrl = "https://example.invalid/a.jpg")
             uiState.value = VideoPlayerUiState(cachedVideo = video(VIDEO_ID), localFileVideoId = VIDEO_ID)
+            // The family app chains the channel row only for an approved channel.
+            val previousMatcher = FamilyMode.channelMatcher
+            FamilyMode.channelMatcher = { FamilyChannelMatcher(channelIds = setOf("UC_real"), handles = emptySet()) }
+            try {
+                applier().applySecondary(SecondaryMetadata.WatchInfo(VIDEO_ID, CURRENT_TOKEN, watched))
+                advanceUntilIdle()
+
+                assertThat(uiState.value.cachedVideo).isEqualTo(watched)
+                coVerify(exactly = 1) {
+                    secondaryMetadata.loadChannelMetadata(
+                        VIDEO_ID,
+                        listOf("https://example.invalid/a.jpg"),
+                        CURRENT_TOKEN,
+                        false,
+                    )
+                }
+            } finally {
+                FamilyMode.channelMatcher = previousMatcher
+            }
+        }
+
+    @Test
+    fun `watch info for a downloaded copy from an unapproved channel blocks the video instead of chaining the channel row`() =
+        runTest(testDispatcher) {
+            val watched = video(VIDEO_ID).copy(channelId = "UC_real", channelThumbnailUrl = "https://example.invalid/a.jpg")
+            uiState.value = VideoPlayerUiState(cachedVideo = video(VIDEO_ID), localFileVideoId = VIDEO_ID)
 
             applier().applySecondary(SecondaryMetadata.WatchInfo(VIDEO_ID, CURRENT_TOKEN, watched))
             advanceUntilIdle()
 
             assertThat(uiState.value.cachedVideo).isEqualTo(watched)
-            coVerify(exactly = 1) {
-                secondaryMetadata.loadChannelMetadata(
-                    VIDEO_ID,
-                    listOf("https://example.invalid/a.jpg"),
-                    CURRENT_TOKEN,
-                    false,
-                )
-            }
+            verify { harness.playerManager.pause() }
+            assertThat(uiState.value.error).isEqualTo("res:${R.string.family_blocked_video}")
+            assertThat(uiState.value.errorHint).isEqualTo("res:${R.string.family_blocked_video_hint}")
+            coVerify(exactly = 0) { secondaryMetadata.loadChannelMetadata(any(), any(), any(), any()) }
         }
 
     @Test

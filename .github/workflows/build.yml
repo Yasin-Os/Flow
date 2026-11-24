@@ -2,7 +2,7 @@ name: Android CI/CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, family-youtube ]
     tags:
       - 'v*'
   pull_request:
@@ -22,10 +22,10 @@ env:
   # Certificate of the official Flow release key. IzzyOnDroid and every
   # installed client pin this value; an APK signed with anything else cannot
   # be installed as an update. Changing it forces every user to reinstall.
-  EXPECTED_SIGNER_SHA256: 4322294ed4caa2d4294140095818080ffe8acc1fbe3cdc76107df45c5286be40
+  EXPECTED_SIGNER_SHA256: 4dfb97bab16140efb692627905bf51a74be7b0ba291dadb950596f8d66b71851
   # Certificate of the nightly key. Every nightly must carry it so each one
   # installs over the previous nightly without an uninstall.
-  EXPECTED_NIGHTLY_SIGNER_SHA256: e42225b5ab3ac68236e54567ef0c4878afbafcdd3d438fbaba343e2d70425bf0
+  EXPECTED_NIGHTLY_SIGNER_SHA256: 4dfb97bab16140efb692627905bf51a74be7b0ba291dadb950596f8d66b71851
 
 # checks, tests, lint and build run on separate runners at the same time, and
 # both publish jobs wait for all four. The CI Gradle properties replace the
@@ -261,6 +261,17 @@ jobs:
           LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
           LASTFM_API_SECRET: ${{ secrets.LASTFM_API_SECRET }}
 
+      # Family YouTube fork: a debug APK for side-load testing, built only on
+      # the family-youtube branch. The debug build type sets no signingConfig
+      # (app/build.gradle.kts), so AGP signs it with its default debug key
+      # and it needs no release/nightly keystore or secrets. It does not
+      # touch the nightly/release paths below.
+      - name: Build family debug APK
+        if: ${{ github.ref == 'refs/heads/family-youtube' }}
+        run: >
+          ./gradlew :app:assembleGithubDebug
+          --build-cache --stacktrace
+
       # Guards the IzzyOnDroid/F-Droid update path: a wrong or missing key here
       # is unrecoverable for installed users, so fail the build rather than
       # publish. Skipped when no keystore was available, e.g. on fork PRs.
@@ -431,6 +442,16 @@ jobs:
           path: dist-nightly/*
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload family debug APK
+        if: ${{ github.ref == 'refs/heads/family-youtube' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: flow-family-youtube-debug-apk
+          path: app/build/outputs/apk/github/debug/app-github-universal-debug*.apk
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
 
       - name: Upload FOSS universal APK
         uses: actions/upload-artifact@v7

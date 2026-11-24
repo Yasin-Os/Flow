@@ -6,6 +6,8 @@ prefs_datastore	audio_settings	main:data/local/AudioSettingsPersistence.kt	PROFI
 prefs_datastore	app_ui_mode	main:data/local/AppUiModePreferences.kt	DEVICE	-	TV or phone is a property of the hardware.
 prefs_datastore	local_media	main:data/localmedia/LocalMediaPreferences.kt	DEVICE	-	Describes the device's media folders.
 prefs_datastore	subscriptions	main:data/local/SubscriptionRepository.kt	PROFILE	library	Followed channels.
+prefs_datastore	family_whitelist	main:data/contentfilter/family/FamilyWhitelistRepository.kt	PROFILE	library	Approved channels for the family app.
+prefs_datastore	family_blocklist	main:data/contentfilter/family/FamilyBlocklistRepository.kt	PROFILE	library	Extra blocked words the family PIN holder added.
 prefs_datastore	liked_videos	main:data/local/LikedVideosRepository.kt	PROFILE	library	Likes.
 prefs_datastore	playlists	main:data/music/PlaylistRepository.kt	PROFILE	library	Music playlists.
 prefs_datastore	view_history	main:data/local/ViewHistory.kt	PROFILE	library	Watch progress.

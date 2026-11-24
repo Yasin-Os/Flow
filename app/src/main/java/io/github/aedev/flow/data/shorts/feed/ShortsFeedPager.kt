@@ -101,12 +101,15 @@ internal class ShortsFeedPager(
         lock.withLock {
             profile = context.profile()
             val seedInputs = context.seedInputs() + sessionSeeds.values
+            // Family mode never opens the anonymous lanes: the feed is the approved
+            // channels' reels, and the tapped reel still opens via the fallback below.
+            val familyMode = context.filters().familyMode
             requestCounter.set(0)
             coroutineScope {
-                listOf(
-                    async { refillExplore() },
-                    async { openChains(startVideoId, seedInputs) },
-                    async { refillDiscovery(resetDepth = true, queriesToRun = OPENING_QUERIES) },
+                listOfNotNull(
+                    if (familyMode) null else async { refillExplore() },
+                    if (familyMode) null else async { openChains(startVideoId, seedInputs) },
+                    if (familyMode) null else async { refillDiscovery(resetDepth = true, queriesToRun = OPENING_QUERIES) },
                     async { refillSubscriptions(channelsToVisit = OPENING_CHANNELS) },
                 ).awaitAll()
             }
@@ -139,8 +142,10 @@ internal class ShortsFeedPager(
             val batch = advance(chain) ?: return@withLock emptyList()
             val filters = context.filters()
             batch
-                .filter { it.id !in usedIds && it.id !in filters.watchedIds && it.id !in filters.suppressedIds }
-                .take(pageSize)
+                .filter {
+                    it.id !in usedIds && it.id !in filters.watchedIds && it.id !in filters.suppressedIds &&
+                        filters.isAllowedChannel(it.channelId)
+                }.take(pageSize)
                 .also { page -> usedIds += page.map { it.id } }
         }
 
@@ -171,13 +176,17 @@ internal class ShortsFeedPager(
     private suspend fun refill() {
         profile = context.profile()
         val quotas = shortsFeedQuotas(pageSize, profile)
+        // Family mode refills only the SUBSCRIPTIONS lane: the anonymous lanes would only
+        // fetch reels the page filter drops.
+        val familyMode = context.filters().familyMode
 
         fun short(lane: ShortsFeedLane) = pools.getValue(lane).size < maxOf(MIN_BUFFER, (quotas[lane] ?: 0) * BUFFER_PAGES)
         coroutineScope {
             listOfNotNull(
-                if (short(ShortsFeedLane.RELATED)) async { refillRelated() } else null,
-                if (short(ShortsFeedLane.EXPLORE)) async { refillExplore() } else null,
-                if (short(
+                if (!familyMode && short(ShortsFeedLane.RELATED)) async { refillRelated() } else null,
+                if (!familyMode && short(ShortsFeedLane.EXPLORE)) async { refillExplore() } else null,
+                if (!familyMode &&
+                    short(
                         ShortsFeedLane.DISCOVERY,
                     )
                 ) {

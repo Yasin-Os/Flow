@@ -74,6 +74,7 @@ private const val MAX_UNPLAYABLE_VIDEO_IDS = 1_000
  * Preferences that never leave the device in a backup: the proxy password and the translation
  * server's API key, SponsorBlock's submission id, which is a private identity for the user's votes
  * and segments, and the app lock, which a restored backup must not be able to turn on or off.
+ * The family PIN joins them: a restored backup must not be able to unlock the family area.
  */
 private val BackupExcludedKeys =
     setOf(
@@ -83,6 +84,8 @@ private val BackupExcludedKeys =
         "app_lock_enabled",
         "app_lock_delay_minutes",
         "app_lock_hide_in_recents",
+        "family_pin_hash",
+        "family_pin_salt",
     )
 
 private val ReminderJson = Json { ignoreUnknownKeys = true }
@@ -593,6 +596,11 @@ class PlayerPreferences(
         val APP_LOCK_ENABLED = device(booleanPreferencesKey("app_lock_enabled"))
         val APP_LOCK_DELAY_MINUTES = device(intPreferencesKey("app_lock_delay_minutes"))
         val APP_LOCK_HIDE_IN_RECENTS = device(booleanPreferencesKey("app_lock_hide_in_recents"))
+
+        // Family PIN: the sealed SHA-256 of salt:pin, and the salt. See FamilyPinRepository;
+        // both names are in BackupExcludedKeys and must stay in sync with it.
+        val FAMILY_PIN_HASH = device(stringPreferencesKey("family_pin_hash"))
+        val FAMILY_PIN_SALT = device(stringPreferencesKey("family_pin_salt"))
         val ANIMATED_ARTWORK_WIFI_ONLY = device(booleanPreferencesKey("animated_artwork_wifi_only"))
         val COMMENT_GIFS_WIFI_ONLY = device(booleanPreferencesKey("comment_gifs_wifi_only"))
         val AUTO_DOWNLOAD_LIKED_MUSIC = device(booleanPreferencesKey("auto_download_liked_music"))

@@ -2,6 +2,10 @@ package io.github.aedev.flow.ui.screens.player
 
 import android.content.Context
 import android.util.Log
+import io.github.aedev.flow.R
+import io.github.aedev.flow.data.contentfilter.family.FamilyCategoryBlock
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilySearchRule
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.recommendation.FlowNeuroEngine
@@ -113,6 +117,24 @@ internal class SecondaryMetadataApplier(
         if (!isLoadCurrent(result.loadToken) || uiState.value.cachedVideo?.id != result.videoId) return
         GlobalPlayerState.setCurrentVideo(result.video)
         uiState.update { it.applyWatchInfo(result.video) }
+        // The family app plays approved channels, and search-discovered videos that pass the
+        // open-search rule (about an approved topic, blocklist-clean). A video opened from
+        // anywhere else — a pasted link, a notification — stops here with the same blocked
+        // message. Local media has no channel id and always passes. A result admitted only by
+        // the query matching a topic (its match is in tags YouTube does not show us) is refused
+        // here: the video itself must carry topic words to play.
+        val video = result.video
+        val searchRule = FamilySearchRule(FamilyMode.channelMatcher(), FamilyMode.textMatcher())
+        if (video.channelId.isNotBlank() && !searchRule.keepsVideo(video)) {
+            playerManager.pause()
+            uiState.update {
+                it.copy(
+                    error = context.getString(R.string.family_blocked_video),
+                    errorHint = context.getString(R.string.family_blocked_video_hint),
+                )
+            }
+            return
+        }
         // A downloaded copy learns its channel only here, so the channel row follows the watch page.
         if (uiState.value.localFileVideoId == result.videoId) {
             secondaryMetadata.loadChannelMetadata(
@@ -132,6 +154,24 @@ internal class SecondaryMetadataApplier(
     /** Kept on the video, so the watch signal carries it. */
     private fun applyCategory(result: SecondaryMetadata.Category) {
         if (!isLoadCurrent(result.loadToken)) return
+        // The family app never plays a blocked category — Music, Entertainment, Film &
+        // Animation — from a channel that is not approved. Approved channels are exempt: their
+        // uploads are routinely categorized Music. The video may have played a moment before
+        // the category arrived; pausing here is the stop, and a retry re-blocks (the category
+        // is checked again on every load).
+        val video = uiState.value.cachedVideo?.takeIf { it.id == result.videoId }
+        if (video != null && FamilyCategoryBlock.isBlocked(result.category) &&
+            !FamilyMode.channelMatcher().allows(video.channelId, video.channelHandle)
+        ) {
+            playerManager.pause()
+            uiState.update {
+                it.copy(
+                    error = context.getString(R.string.family_blocked_video),
+                    errorHint = context.getString(R.string.family_blocked_video_hint),
+                )
+            }
+            return
+        }
         if (PlaybackSpeedPolicy.isMusic(musicVideoType = null, category = result.category, openedAsMusic = false)) {
             scope.launch { playbackPreparer.applyLateMusicSignal(uiState.value.speedContextFor(result.videoId)) }
         }

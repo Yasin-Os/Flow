@@ -1,6 +1,7 @@
 package io.github.aedev.flow.ui.screens.player
 
 import android.util.Log
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.localmedia.LocalMediaIds
 import io.github.aedev.flow.data.model.RelatedCollection
@@ -375,6 +376,9 @@ internal class PlayerSecondaryMetadataLoader(
         loadToken: Long,
         awaitPlayback: Boolean = true,
     ) {
+        // The family app has no recommendations: no up-next list, no end-screen
+        // recommendations, and no autoplay candidates from related videos.
+        if (FamilyMode.ENABLED) return
         val selected =
             PlayerRelatedVideosPolicy.select(
                 videoId = videoId,

@@ -1,5 +1,6 @@
 package io.github.aedev.flow.ui.screens.player
 
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.recommendation.FeedExclusions
@@ -35,6 +36,8 @@ internal class RelatedPagesLoader(
     private val exclusions: () -> FeedExclusions,
 ) {
     fun loadMore(videoId: String) {
+        // The family app has no recommendations: the related lane never pages.
+        if (FamilyMode.ENABLED) return
         var continuation: String? = null
         uiState.update { state ->
             val next = state.relatedContinuation

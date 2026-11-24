@@ -13,6 +13,9 @@ import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.aedev.flow.data.community.PostCommentsLoader
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
+import io.github.aedev.flow.data.contentfilter.family.FamilyTopicMatcher
 import io.github.aedev.flow.data.engagement.HiddenContentStore
 import io.github.aedev.flow.data.local.HomeFeedColumns
 import io.github.aedev.flow.data.local.PlayerPreferences
@@ -58,6 +61,8 @@ data class SearchUiState(
     val header: SearchHeader = SearchHeader(),
     /** The query runs as typed, without YouTube's spelling correction. */
     val exactQuery: Boolean = false,
+    /** True when the query carries a blocked word: no search runs, the screen explains. */
+    val blockedQuery: Boolean = false,
 )
 
 @HiltViewModel
@@ -134,12 +139,35 @@ class SearchViewModel
             tapped: Video,
         ): ShortsQueueSource = shortsQueueHandoff.sourceForShelf(shelf, tapped)
 
+        /**
+         * The open-search query gate: refuse when the hard tier or a blocked emoji matches, or
+         * when the entertainment or vice tier matches and the query itself is not about an
+         * approved topic. A blocked query never reaches YouTube and is never saved to history.
+         * [FamilyTextMatcher.blocksQuery] refuses on any tier match and stays the gate for the
+         * Settings channel search, which is channels-only.
+         */
+        private fun isBlockedSearchQuery(query: String): Boolean {
+            val matcher = FamilyMode.textMatcher()
+            if (matcher.blocksHard(query)) return true
+            if (matcher.containsBlockedEmoji(query)) return true
+            if (matcher.blocksVice(query) || matcher.blocksEntertainment(query)) {
+                return !FamilyTopicMatcher.DEFAULT.matchesTopic(query)
+            }
+            return false
+        }
+
         fun search(
             query: String,
             filters: SearchFilter = SearchFilter.DEFAULT,
         ) {
             if (query.isBlank()) {
                 clearSearch()
+                return
+            }
+            // A blocked word never reaches YouTube: the family app refuses it with a message.
+            if (isBlockedSearchQuery(query)) {
+                _uiState.value = SearchUiState(query = query, filters = filters, blockedQuery = true)
+                _searchKey.value = null
                 return
             }
             _uiState.value = SearchUiState(query = query, filters = filters)
@@ -162,13 +190,13 @@ class SearchViewModel
             filters: SearchFilter,
         ) {
             search(query, filters)
-            rememberSearch(query, filters)
+            if (!_uiState.value.blockedQuery) rememberSearch(query, filters)
         }
 
         fun updateFilters(filters: SearchFilter) {
             val current = _uiState.value
             _uiState.value = current.copy(filters = filters)
-            if (current.query.isNotBlank()) {
+            if (current.query.isNotBlank() && !current.blockedQuery) {
                 _searchKey.value = SearchKey(current.query, filters, current.exactQuery)
                 rememberSearch(current.query, filters)
             }
@@ -178,6 +206,11 @@ class SearchViewModel
         fun searchExactly(query: String) {
             if (query.isBlank()) return
             val filters = _uiState.value.filters
+            if (isBlockedSearchQuery(query)) {
+                _uiState.value = SearchUiState(query = query, filters = filters, exactQuery = true, blockedQuery = true)
+                _searchKey.value = null
+                return
+            }
             _uiState.value = SearchUiState(query = query, filters = filters, exactQuery = true)
             _searchKey.value = SearchKey(query, filters, exactQuery = true)
         }
@@ -198,7 +231,8 @@ class SearchViewModel
         }
 
         /** Rows for [query], or null when the request failed and the rows on screen should stay. */
-        suspend fun getSearchSuggestions(query: String): List<SearchSuggestion>? = suggestionsRepository.suggestions(query)
+        suspend fun getSearchSuggestions(query: String): List<SearchSuggestion>? =
+            suggestionsRepository.suggestions(query)?.filterNot { isBlockedSearchQuery(it.text) }
 
         fun warmSearchSuggestions() {
             viewModelScope.launch(PerformanceDispatcher.networkIO) { suggestionsRepository.warm() }

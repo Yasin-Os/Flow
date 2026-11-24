@@ -19,6 +19,7 @@ import io.github.aedev.flow.ui.screens.settings.content.LibrarySettingsScreen
 import io.github.aedev.flow.ui.screens.settings.content.MusicHomeSettingsScreen
 import io.github.aedev.flow.ui.screens.settings.diagnostics.DiagnosticsScreen
 import io.github.aedev.flow.ui.screens.settings.downloads.DownloadSettingsScreen
+import io.github.aedev.flow.ui.screens.settings.family.FamilySettingsScreen
 import io.github.aedev.flow.ui.screens.settings.history.HistorySettingsScreen
 import io.github.aedev.flow.ui.screens.settings.integrations.IntegrationsScreen
 import io.github.aedev.flow.ui.screens.settings.localmedia.LocalMediaSettingsScreen
@@ -78,6 +79,10 @@ internal fun SettingsDetail(
 
         SettingsDestination.DISCOVER_CHANNELS -> {
             DiscoverChannelsScreen(onBack = onBack, highlight = target.highlight)
+        }
+
+        SettingsDestination.FAMILY -> {
+            FamilySettingsScreen(onBack = onBack, highlight = target.highlight)
         }
 
         SettingsDestination.THEME -> {
