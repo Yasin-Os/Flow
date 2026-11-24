@@ -209,7 +209,11 @@ class FamilyWhitelistRepository
             const val TAG = "FamilyWhitelist"
             val CHANNELS_KEY = stringPreferencesKey("channels")
             val SEED_VERSION_KEY = intPreferencesKey("seed_version")
-            /** Bump when [FAMILY_SEED_CHANNELS] gains channels: existing installs merge them in once. */
-            const val SEED_VERSION = 2
+            /**
+             * Bump when [FAMILY_SEED_CHANNELS] gains channels: existing installs merge them in
+             * once. Round 3 bumped it again because run #24's head already carried version 2,
+             * so a merge keyed on 2 would skip the new channels on any install of that head.
+             */
+            const val SEED_VERSION = 3
         }
     }
