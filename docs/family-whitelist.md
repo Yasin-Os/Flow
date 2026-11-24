@@ -6,12 +6,13 @@ the player blocks any video whose channel is not on it. Every entry is keyed by 
 verified YouTube channel id (`UC…`); the handle is a fallback only. A blank handle
 means no handle could be confirmed — the id is the match key.
 
-**Counts (244 channels): waz 65 (48 + 17 media) · Ummah Network 1 · ghazal 44 · tilawat 22 ·
-cartoons 8 · comedy 5 · drama 2 · news 97**
+**Counts (243 channels): waz 65 (48 + 17 media) · Ummah Network 1 · ghazal 44 · tilawat 22 ·
+cartoons 8 · comedy 5 · drama 2 · news 96**
 
 The shipped seed list is `app/src/main/java/io/github/aedev/flow/data/contentfilter/family/FamilySeedChannels.kt`.
-Existing installs gain new channels through the seed merge (`SEED_VERSION = 3`); a
-channel the PIN holder removed is never re-added. News entries carry `category = "news"`:
+Existing installs gain new channels through the seed merge (`SEED_VERSION = 4`); a
+channel the PIN holder removed is never re-added, and ids the seed dropped
+(`REMOVED_SEED_IDS`) are pruned from existing installs. News entries carry `category = "news"`:
 they are whitelisted for news, but the entertainment-tier title filter still applies to
 their videos, so a music/drama upload from a news channel is blocked.
 
@@ -214,7 +215,7 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | Eagle Islamic Natok | @eagleislamicnatok | `UCd5A8poxhdxProarD8AU-bw` |
 | The path of islam | — | `UC816Kbi-g_VtbJH0xRTPN2A` |
 
-## News — 97
+## News — 96
 
 News channels are whitelisted for news, but the entertainment-tier title filter still
 applies to their videos (`category = "news"` in the seed): a video titled with a
@@ -309,7 +310,6 @@ Channels that are primarily entertainment, not news, were left out (see below).
 | Middle East Eye | @middleeasteye | `UCR0fZh5SBxxMNYdg0VzRFkg` |
 | The National | @thenationaluaechannel | `UCGYf0VFdlSTzcJghW9z1DAA` |
 | Al Mayadeen News | @almayadeennews | `UC9YbjpvsFZytS0DnO1FnTKw` |
-| Press TV | — | `UC-One4A1gGcN__aVAuBbHdA` |
 | i24NEWS English | @i24news_en | `UCvHDpsWKADrDia0c99X37vg` |
 | i24NEWS Français | @i24news_fr | `UCgPYsPyGhhQJQ9zOUQDWDMA` |
 | Anadolu Agency | @anadoluajansi | `UCVbZYhcirOke2vipxs4lT2w` |
@@ -377,9 +377,16 @@ These channels are whitelisted, but the PIN holder should know what else they ca
   SATV, Ekushey TV) were left out entirely — only their news arms, where one exists,
   are listed. DW বাংলা has sexually explicit titles among its most-viewed videos;
   those titles are caught by the hard tier. VOA News and VOA বাংলা look dormant
-  (newest videos ~early 2025); their archives stay. BBC News Arabic, FRANCE 24
-  Arabic and Press TV were verified through second-hand sources (their YouTube pages
+  (newest videos ~early 2025); their archives stay. BBC News Arabic and FRANCE 24
+  Arabic were verified through second-hand sources (their YouTube pages
   returned empty text) — spot-check them in the app.
+
+## Removed from the seed (round 4)
+
+- **Press TV** (`UC-One4A1gGcN__aVAuBbHdA`): the id kept failing to load in the app
+  ("1 channel couldn't be loaded"), the channel was terminated repeatedly, and
+  @presstv belongs to a random person — no live official channel exists under this
+  id. Removed from the seed and pruned from existing installs (`REMOVED_SEED_IDS`).
 
 ## Explicitly NOT whitelisted
 
