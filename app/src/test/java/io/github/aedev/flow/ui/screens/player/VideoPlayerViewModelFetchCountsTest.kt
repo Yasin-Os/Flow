@@ -90,7 +90,8 @@ class VideoPlayerViewModelFetchCountsTest {
             coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any()) }
             coVerify(exactly = 0) { YouTube.player(any(), any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 1) { harness.repository.enrichFromWatchMetadata(any()) }
-            coVerify(exactly = 1) { harness.repository.getRelatedCandidates("vid_dl") }
+            // The family app never fetches related candidates: recommendations are off.
+            coVerify(exactly = 0) { harness.repository.getRelatedCandidates("vid_dl") }
             coVerify(exactly = 1) { harness.repository.videoChapters("vid_dl") }
             coVerify(exactly = 1) { harness.repository.videoHeatmap("vid_dl") }
             coVerify(exactly = 0) { harness.repository.videoCategory(any()) }
