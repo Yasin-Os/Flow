@@ -128,8 +128,7 @@ class FamilyWhitelistRepository
             setSeedVersion(SEED_VERSION)
         }
 
-        private suspend fun seedVersion(): Int =
-            context.familyWhitelistDataStore.data.first()[SEED_VERSION_KEY] ?: 0
+        private suspend fun seedVersion(): Int = context.familyWhitelistDataStore.data.first()[SEED_VERSION_KEY] ?: 0
 
         private suspend fun setSeedVersion(version: Int) {
             context.familyWhitelistDataStore.edit { preferences -> preferences[SEED_VERSION_KEY] = version }
@@ -209,6 +208,7 @@ class FamilyWhitelistRepository
             const val TAG = "FamilyWhitelist"
             val CHANNELS_KEY = stringPreferencesKey("channels")
             val SEED_VERSION_KEY = intPreferencesKey("seed_version")
+
             /**
              * Bump when [FAMILY_SEED_CHANNELS] gains channels: existing installs merge them in
              * once. Round 3 bumped it again because run #24's head already carried version 2,
