@@ -74,6 +74,28 @@ class FamilyTextMatcherTest {
     }
 
     @Test
+    fun `madina does not match mad`() {
+        assertThat(text.blocksEntertainment("মদিনা")).isFalse()
+        assertThat(text.blocksEntertainment("মদীনা")).isFalse()
+        assertThat(blocks("মদিনা শরীফ")).isFalse()
+        assertThat(text.blocksQuery("মদিনা")).isFalse()
+    }
+
+    @Test
+    fun `a vice root without a marker still blocks, with one it passes`() {
+        assertThat(text.blocksEntertainment("beer")).isTrue()
+        assertThat(text.blocksEntertainment("beer হারাম")).isFalse()
+        assertThat(text.blocksQuery("wine")).isTrue()
+        assertThat(text.blocksQuery("wine হারাম")).isFalse()
+    }
+
+    @Test
+    fun `a music title that merely mentions a lecture marker still blocks`() {
+        assertThat(text.blocksEntertainment("গান শুনুন - ওয়াজ")).isTrue()
+        assertThat(text.blocksEntertainment("pop শুনুন - ওয়াজ")).isTrue()
+    }
+
+    @Test
     fun `a whitelisted ghazal keeps its song title, an outsider does not`() {
         assertThat(blocks("Bangla Islamic Song", channelId = "UCghazal", handle = "@holytune")).isFalse()
         assertThat(blocks("Bangla Islamic Song")).isTrue()
