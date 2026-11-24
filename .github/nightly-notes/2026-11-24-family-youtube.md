@@ -2,7 +2,7 @@
 - White app icon background with a red play button
 - Search is back in the main app, showing only videos from your approved channels
 - 244 approved channels: waz, ghazal, tilawat, Islamic cartoons, halal comedy, halal drama, and news
-- 97 news channels: Bangladeshi, international and Islamic news — a music or drama video from a news channel is still blocked
+- 97 news channels: Bangladeshi, international and Islamic news, a music or drama video from a news channel is still blocked
 - Waz from media channels too: Charmonai, Mamunul Haque, Tariq Monowar and other famous speakers whose waz lives on media channels
 - Ummah Network added at your request
 
