@@ -116,6 +116,20 @@ internal class SecondaryMetadataApplier(
         if (!isLoadCurrent(result.loadToken) || uiState.value.cachedVideo?.id != result.videoId) return
         GlobalPlayerState.setCurrentVideo(result.video)
         uiState.update { it.applyWatchInfo(result.video) }
+        // The family app plays only approved channels. A video opened from anywhere else —
+        // a pasted link, a notification — stops here with the same blocked message.
+        // Local media has no channel id and always passes.
+        val video = result.video
+        if (video.channelId.isNotBlank() && !FamilyMode.channelMatcher().allows(video.channelId, video.channelHandle)) {
+            playerManager.pause()
+            uiState.update {
+                it.copy(
+                    error = context.getString(R.string.family_blocked_video),
+                    errorHint = context.getString(R.string.family_blocked_video_hint),
+                )
+            }
+            return
+        }
         // A downloaded copy learns its channel only here, so the channel row follows the watch page.
         if (uiState.value.localFileVideoId == result.videoId) {
             secondaryMetadata.loadChannelMetadata(
