@@ -13,6 +13,7 @@ import androidx.paging.cachedIn
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.aedev.flow.data.community.PostCommentsLoader
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.engagement.HiddenContentStore
 import io.github.aedev.flow.data.local.HomeFeedColumns
 import io.github.aedev.flow.data.local.PlayerPreferences
@@ -58,6 +59,8 @@ data class SearchUiState(
     val header: SearchHeader = SearchHeader(),
     /** The query runs as typed, without YouTube's spelling correction. */
     val exactQuery: Boolean = false,
+    /** True when the query carries a blocked word: no search runs, the screen explains. */
+    val blockedQuery: Boolean = false,
 )
 
 @HiltViewModel
@@ -142,6 +145,12 @@ class SearchViewModel
                 clearSearch()
                 return
             }
+            // A blocked word never reaches YouTube: the family app refuses it with a message.
+            if (FamilyMode.textMatcher().blocksQuery(query)) {
+                _uiState.value = SearchUiState(query = query, filters = filters, blockedQuery = true)
+                _searchKey.value = null
+                return
+            }
             _uiState.value = SearchUiState(query = query, filters = filters)
             _searchKey.value = SearchKey(query, filters)
 
@@ -162,13 +171,13 @@ class SearchViewModel
             filters: SearchFilter,
         ) {
             search(query, filters)
-            rememberSearch(query, filters)
+            if (!_uiState.value.blockedQuery) rememberSearch(query, filters)
         }
 
         fun updateFilters(filters: SearchFilter) {
             val current = _uiState.value
             _uiState.value = current.copy(filters = filters)
-            if (current.query.isNotBlank()) {
+            if (current.query.isNotBlank() && !current.blockedQuery) {
                 _searchKey.value = SearchKey(current.query, filters, current.exactQuery)
                 rememberSearch(current.query, filters)
             }
@@ -178,6 +187,11 @@ class SearchViewModel
         fun searchExactly(query: String) {
             if (query.isBlank()) return
             val filters = _uiState.value.filters
+            if (FamilyMode.textMatcher().blocksQuery(query)) {
+                _uiState.value = SearchUiState(query = query, filters = filters, exactQuery = true, blockedQuery = true)
+                _searchKey.value = null
+                return
+            }
             _uiState.value = SearchUiState(query = query, filters = filters, exactQuery = true)
             _searchKey.value = SearchKey(query, filters, exactQuery = true)
         }
