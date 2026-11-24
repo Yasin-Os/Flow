@@ -24,6 +24,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -61,6 +62,9 @@ internal class HomeFeedLoader(
     private companion object {
         const val MAX_RELATED_SEEDS = 4
         const val SNAPSHOT_FEED_DEBOUNCE_MS = 2_000L
+
+        // How long the first launch waits for the subscription refresh before painting the feed.
+        const val FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS = 30_000L
 
         // Trace section the Home refresh benchmark reads (#1301).
         const val TRACE_WAVE1 = "home.wave1"
@@ -220,12 +224,28 @@ internal class HomeFeedLoader(
                     val exclusions = session.feedExclusions()
                     // Subscriptions come from the store, which is local: the network top-up runs
                     // after first paint and never holds the feed back.
-                    val storedFeed =
+                    var storedFeed =
                         if (userSubs.isEmpty()) {
                             emptyList()
                         } else {
                             runCatching { subscriptionFeedRepository.observeFeed().first() }.getOrDefault(emptyList())
                         }
+                    // In family mode the feed is the approved channels' uploads, and on a fresh
+                    // install the store is empty: the first paint would be a black screen. Run the
+                    // subscription refresh first and wait for it (bounded), so the lanes build from
+                    // real uploads. Later launches keep the cached path: a non-empty store skips
+                    // the wait. The timeout abandons the rest of the sweep; the channels it did
+                    // not reach stay stale for the next cycle.
+                    if (familyMode && userSubs.isNotEmpty() && storedFeed.isEmpty()) {
+                        runCatching {
+                            withTimeoutOrNull(FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS) {
+                                val plan = subscriptionFeedRepository.planRefresh(force = false)
+                                subscriptionFeedRepository.refresh(plan).collect { }
+                            }
+                        }
+                        storedFeed =
+                            runCatching { subscriptionFeedRepository.observeFeed().first() }.getOrDefault(emptyList())
+                    }
                     val feedShorts =
                         (storedFeed.storedSubscriptionReels(now) + rawDiscovery.extractShorts())
                             .distinctBy { it.id }
