@@ -5,6 +5,7 @@ import android.util.Log
 import io.github.aedev.flow.R
 import io.github.aedev.flow.data.contentfilter.family.FamilyCategoryBlock
 import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilySearchRule
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.recommendation.FlowNeuroEngine
@@ -116,11 +117,15 @@ internal class SecondaryMetadataApplier(
         if (!isLoadCurrent(result.loadToken) || uiState.value.cachedVideo?.id != result.videoId) return
         GlobalPlayerState.setCurrentVideo(result.video)
         uiState.update { it.applyWatchInfo(result.video) }
-        // The family app plays only approved channels. A video opened from anywhere else —
-        // a pasted link, a notification — stops here with the same blocked message.
-        // Local media has no channel id and always passes.
+        // The family app plays approved channels, and search-discovered videos that pass the
+        // open-search rule (about an approved topic, blocklist-clean). A video opened from
+        // anywhere else — a pasted link, a notification — stops here with the same blocked
+        // message. Local media has no channel id and always passes. A result admitted only by
+        // the query matching a topic (its match is in tags YouTube does not show us) is refused
+        // here: the video itself must carry topic words to play.
         val video = result.video
-        if (video.channelId.isNotBlank() && !FamilyMode.channelMatcher().allows(video.channelId, video.channelHandle)) {
+        val searchRule = FamilySearchRule(FamilyMode.channelMatcher(), FamilyMode.textMatcher())
+        if (video.channelId.isNotBlank() && !searchRule.keepsVideo(video)) {
             playerManager.pause()
             uiState.update {
                 it.copy(
