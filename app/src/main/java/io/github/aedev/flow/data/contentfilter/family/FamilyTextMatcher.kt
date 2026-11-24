@@ -53,7 +53,10 @@ import java.util.Locale
  * desire and avoiding sin, and the hard tier applies to whitelisted channels too, so they
  * would hide legitimate waz titles. Dropped from Gemini's lists for the same reason:
  * "seduction" and "seductive" (noun/adjective forms of "seduce") and "دعارة". A title like
- * "গজল | Holy Tune" or "সুরা আল-বাকারা" must pass untouched.
+ * "গজল | Holy Tune" or "সুরা আল-বাকারা" must pass untouched. Bare `মদ` is deliberately
+ * not a vice word either: the whole-word boundary allows a following combining mark, so
+ * it would match `মদিনা` — the vice roots that live only in the title regexes are
+ * covered by the vice exemption ([VICE_ROOT_PATTERN]) instead.
  *
  * Known over-block edges, kept deliberately: "romance" is in the hard tier, so a waz titled
  * "Romance in Islam" would be blocked — the word is overwhelmingly romantic/entertainment
@@ -150,8 +153,7 @@ class FamilyTextMatcher(
         val text = strippedNormalized("$title\n$description")
         if (hardPattern?.containsMatchIn(text) == true) return true
         val viceMatches = vicePattern?.containsMatchIn(text) == true
-        val viceExempt =
-            viceMatches && exemptionPattern?.containsMatchIn(text) == true
+        val viceExempt = isViceExempt(text)
         if (viceMatches && !viceExempt) return true
         val whitelisted = channelMatcher.allows(channelId, handle)
         if (whitelisted && !channelMatcher.isNewsChannel(channelId, handle)) return false
@@ -193,11 +195,21 @@ class FamilyTextMatcher(
     ): Boolean {
         val pattern = if (exemptDrama) entertainmentPatternExemptDrama else entertainmentPattern
         if (pattern?.containsMatchIn(text) == true) return true
-        val viceExempt =
-            vicePattern?.containsMatchIn(text) == true &&
-                exemptionPattern?.containsMatchIn(text) == true
-        return matchesTitleRegexes(text, exemptDrama, viceExempt)
+        return matchesTitleRegexes(text, exemptDrama, isViceExempt(text))
     }
+
+    /**
+     * True when the text is a lecture about a sin: it carries an
+     * [ISLAMIC_EXEMPTION_MARKERS] term and matches a vice word or a vice root
+     * that lives only in the short-root title regexes ("মদ", "beer", ...).
+     * Those roots cannot join the vice word list: the whole-word boundary
+     * allows a following combining mark, so bare "মদ" would also match
+     * "মদিনা" — they are checked with the regexes' own explicit boundaries
+     * ([VICE_ROOT_PATTERN]) instead.
+     */
+    private fun isViceExempt(text: String): Boolean =
+        exemptionPattern?.containsMatchIn(text) == true &&
+            (vicePattern?.containsMatchIn(text) == true || VICE_ROOT_PATTERN.containsMatchIn(text))
 
     /**
      * The six title regexes. Index 5 (drama/serial + episode number) is skipped under the
