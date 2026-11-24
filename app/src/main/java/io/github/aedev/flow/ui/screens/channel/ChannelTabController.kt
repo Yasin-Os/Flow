@@ -4,6 +4,8 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import androidx.paging.filter
+import io.github.aedev.flow.data.contentfilter.family.FamilySearchRule
 import io.github.aedev.flow.data.engagement.HiddenContent
 import io.github.aedev.flow.data.paging.FeedTabPagingSource
 import io.github.aedev.flow.data.paging.withoutHiddenVideos
@@ -14,6 +16,7 @@ import io.github.aedev.flow.innertube.pages.channel.ChannelTabKind
 import io.github.aedev.flow.innertube.pages.renderer.FeedItem
 import io.github.aedev.flow.innertube.pages.renderer.FeedItemOwner
 import io.github.aedev.flow.innertube.pages.renderer.FeedShelf
+import io.github.aedev.flow.innertube.pages.renderer.videoOrNull
 import io.github.aedev.flow.utils.PerformanceDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -41,10 +44,16 @@ internal data class ChannelTabState(
  * Videos and Live tabs to their page cap the moment a channel opened — up to fifty requests each,
  * throttled to 800 ms apart, on both tabs at once, whether or not the channel had a Live tab and
  * whether or not either was ever looked at.
+ *
+ * [familySearch] supplies the open-search rule when one applies: a non-whitelisted channel's tab
+ * then shows only its videos about approved topics, like search does. Whitelisted channels keep
+ * their tab, minus videos the hard/vice tiers block (they would not play either). Null means no
+ * family filtering on tabs.
  */
 internal class ChannelTabController(
     private val scope: CoroutineScope,
     private val hidden: Flow<HiddenContent>,
+    private val familySearch: () -> FamilySearchRule? = { null },
 ) {
     private val _states = MutableStateFlow<Map<ChannelTabKind, ChannelTabState>>(emptyMap())
     val states: StateFlow<Map<ChannelTabKind, ChannelTabState>> = _states.asStateFlow()
@@ -165,6 +174,8 @@ internal class ChannelTabController(
         continuation: String?,
         selected: List<Int>,
     ) {
+        // The family search rule, resolved once per pager.
+        val familySearchRule = familySearch()
         val pager =
             Pager(
                 config = PagingConfig(pageSize = PAGE_SIZE, prefetchDistance = PREFETCH_DISTANCE, enablePlaceholders = false),
@@ -180,7 +191,16 @@ internal class ChannelTabController(
                 },
             ).flow
                 .cachedIn(scope)
-                .combine(hidden) { items, hidden -> items.withoutHiddenVideos(hidden) }
+                .combine(hidden) { items, hidden ->
+                    var result = items.withoutHiddenVideos(hidden)
+                    if (familySearchRule != null) {
+                        result =
+                            result.filter { item ->
+                                item.videoOrNull()?.let { familySearchRule.keepsVideo(it) } ?: true
+                            }
+                    }
+                    result
+                }
 
         _states.update { states ->
             val current = states[kind] ?: ChannelTabState()
