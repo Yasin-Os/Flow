@@ -95,11 +95,15 @@ class FamilyTextMatcher(
     private val exemptionPattern = buildPattern(ISLAMIC_EXEMPTION_MARKERS)
     private val stripPattern = buildPattern(STRIP_BEFORE_MATCH)
 
-    /** True when no tier has any words, so nothing can match. */
+    /**
+     * True when no tier has any words, so nothing can match. The exemption
+     * markers are not a tier — they only excuse a vice match — so they do
+     * not count here; otherwise even [EMPTY] would report non-empty.
+     */
     val isEmpty: Boolean
         get() =
             hardPattern == null && entertainmentPattern == null &&
-                vicePattern == null && exemptionPattern == null
+                vicePattern == null
 
     /** The hard tier only: explicit/sexual terms. */
     fun blocksHard(text: String): Boolean = hardPattern?.containsMatchIn(strippedNormalized(text)) == true
