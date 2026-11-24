@@ -82,11 +82,15 @@ class FamilyChannelMatcher(
                 channelIds = channels.mapNotNull { it.channelId.takeIf(String::isNotBlank) }.toSet(),
                 handles = channels.mapNotNull { AiHandle.normalize(it.handle) }.toSet(),
                 newsChannelIds =
-                    channels.filter { it.category == CATEGORY_NEWS }
-                        .mapNotNull { it.channelId.takeIf(String::isNotBlank) }.toSet(),
+                    channels
+                        .filter { it.category == CATEGORY_NEWS }
+                        .mapNotNull { it.channelId.takeIf(String::isNotBlank) }
+                        .toSet(),
                 newsHandles =
-                    channels.filter { it.category == CATEGORY_NEWS }
-                        .mapNotNull { AiHandle.normalize(it.handle) }.toSet(),
+                    channels
+                        .filter { it.category == CATEGORY_NEWS }
+                        .mapNotNull { AiHandle.normalize(it.handle) }
+                        .toSet(),
             )
     }
 }
