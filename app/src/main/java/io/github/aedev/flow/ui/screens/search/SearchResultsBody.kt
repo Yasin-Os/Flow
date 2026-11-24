@@ -158,6 +158,13 @@ internal fun ColumnScope.SearchResultsBody(
             }
 
         when {
+            uiState.blockedQuery -> {
+                FlowEmptyState(
+                    title = stringResource(R.string.family_search_blocked),
+                    icon = Icons.Rounded.Search,
+                )
+            }
+
             refreshState is LoadState.Loading -> {
                 FeedGridSkeleton(layout = feedLayout, listMode = isGridMode)
             }
