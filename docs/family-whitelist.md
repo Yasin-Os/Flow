@@ -1,8 +1,10 @@
 # Family YouTube — approved channel whitelist
 
-The family app shows videos **only** from the channels below. Nothing else gets
-access: the home feed, search, Shorts, and the player all filter by this list, and
-the player blocks any video whose channel is not on it. Every entry is keyed by its
+The family app shows videos **only** from the channels below on the home feed, in
+Shorts, and on channel pages. **Search is different since round 4:** it is open to
+every channel, but only for approved topics (see "Open search" below), and every
+result still passes the blocklist. The player blocks any video whose channel is not
+on the list and that does not pass the open-search rule. Every entry is keyed by its
 verified YouTube channel id (`UC…`); the handle is a fallback only. A blank handle
 means no handle could be confirmed — the id is the match key.
 
@@ -15,6 +17,32 @@ channel the PIN holder removed is never re-added, and ids the seed dropped
 (`REMOVED_SEED_IDS`) are pruned from existing installs. News entries carry `category = "news"`:
 they are whitelisted for news, but the entertainment-tier title filter still applies to
 their videos, so a music/drama upload from a news channel is blocked.
+
+## Open search (round 4)
+
+Home stays whitelist-only, but search is open to every channel **for these topics
+only**: waz, ghazal/nasheed, tilawat, Islamic cartoons, halal comedy, halal drama,
+news, and Islamic content generally. A video from a channel that is not whitelisted
+is kept only when its title, description, channel name, or the snippet YouTube
+returns matches one of those topics **and** it passes the blocklist. If the query
+itself matches a topic, the result-side topic gate relaxes to blocklist-only.
+Whitelisted channels always pass the topic gate; the blocklist still applies to
+them (hard and vice tiers always, entertainment tier for news channels).
+
+The blocklist has three tiers: hard (explicit/sexual words — applies to every
+video, whitelisted included), vice (gambling/alcohol/drugs — applies to every
+video, except a lecture *about* the sin, e.g. "জুয়া ও মদপানের ভয়াবহতা - নতুন ওয়াজ"),
+and entertainment (music/song/dance/movie/drama and translations — non-whitelisted
+channels and whitelisted news channels only). Halal negations are stripped before
+matching ("No Music Nasheed", "ইসলামী সংগীত"), and a halal-drama match exempts
+drama and film words ("The Message Movie", "islamic short film"). Shorts stay
+whitelist-only, playlists are dropped from search, and search-discovered videos are
+never learned from by the recommendation engine.
+
+No filter can guarantee 100%: a title can hide what a video really is, and YouTube
+search can return a video whose match is in tags the app cannot see. A result
+admitted only because the query matched a topic is refused at playback if the video
+itself carries no topic words.
 
 ## Waz — 48
 
