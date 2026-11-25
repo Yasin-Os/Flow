@@ -21,8 +21,8 @@ import io.github.aedev.flow.data.model.Video
  *    what search and the player already admit.
  *
  * Ranking is category-weighted, then Bangladeshi-first, then recency: waz, tilawat and
- * ghazal/nasheed first, then the other approved categories (cartoons, comedy, drama, ummah,
- * and any channel whose category has not been stored yet), then news last — and inside each
+ * ghazal/nasheed first, then the other approved categories (cartoons, comedy, drama, tour,
+ * ummah, and any channel whose category has not been stored yet), then news last — and inside each
  * tier, Bangladeshi videos before foreign ones, newest first within each step. So a
  * Bangladeshi news video still ranks after a foreign waz video: Bangladeshi-first applies
  * inside a tier, it never lifts a lower tier above a higher one. [suggestRelated]
@@ -189,6 +189,8 @@ object FamilySuggestionRanker {
      * 0 — waz, tilawat, ghazal: the categories the user asked to see more and more of.
      * 1 — every other approved category, and channels whose category has not been stored
      * yet (an uncategorized approved channel is still approved, never demoted to news).
+     * Tour sits here: light general-interest travel, below the religious core and above
+     * news, alongside cartoons, comedy and drama.
      * 2 — news, last: approved for news, but it must not crowd out waz, tilawat and ghazal.
      */
     private fun tier(category: String): Int =
@@ -197,6 +199,8 @@ object FamilySuggestionRanker {
             FamilyChannelMatcher.CATEGORY_TILAWAT,
             FamilyChannelMatcher.CATEGORY_GHAZAL,
             -> 0
+
+            FamilyChannelMatcher.CATEGORY_TOUR -> 1
 
             FamilyChannelMatcher.CATEGORY_NEWS -> 2
 
