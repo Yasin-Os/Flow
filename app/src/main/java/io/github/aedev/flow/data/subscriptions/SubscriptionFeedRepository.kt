@@ -411,13 +411,22 @@ class SubscriptionFeedRepository
          * Uploads Home read from channel tabs. A row RSS already stored keeps its exact publish time
          * and gains the length and counts RSS cannot give; an upload RSS has not seen yet is added.
          * The channel is not marked fetched, so the feed's own refresh schedule is unchanged.
+         *
+         * [storedFeed] is the caller's already-loaded cached feed, used in place of re-reading
+         * the whole store: the split below only needs it to tell a known row from an unseen
+         * upload, and an insert is `IfAbsent`, so a snapshot taken just before this call can
+         * at worst miss enriching a row that arrived in between — never duplicate or lose one.
+         * Null loads the store, as before.
          */
-        suspend fun mergeChannelTabUploads(uploads: List<Video>) {
+        suspend fun mergeChannelTabUploads(
+            uploads: List<Video>,
+            storedFeed: List<Video>? = null,
+        ) {
             if (uploads.isEmpty()) return
             val now = System.currentTimeMillis()
             val recent = uploads.filter { it.timestamp > now - SUBSCRIPTION_CACHE_WINDOW_MS }
             if (recent.isEmpty()) return
-            val stored = withContext(PerformanceDispatcher.diskIO) { loadCachedFeed() }
+            val stored = storedFeed ?: withContext(PerformanceDispatcher.diskIO) { loadCachedFeed() }
             val (inserts, updates) = splitChannelTabUploads(recent, stored)
             withContext(PerformanceDispatcher.diskIO) {
                 cacheDao.insertSubscriptionFeedIfAbsent(inserts.map { it.toEntity(now) })
