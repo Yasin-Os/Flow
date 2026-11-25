@@ -3,9 +3,10 @@
 - Every approved channel now carries its category, so suggestions always know what kind of video it is
 - Bangladeshi videos now come before foreign ones inside each group, and the home feed follows the same order
 - Tour and travel channels can now join the approved list, and their videos rank with the other general videos, after waz, tilawat and ghazal
+- 28 Bangladeshi tour and travel vlog channels joined the list, and the list now has 304 approved channels: 204 Bangladeshi and 100 foreign
 
 ## Improved
-- Suggestions only ever come from your 243 approved channels, and every suggested title still passes the safety filter
+- Suggestions only ever come from your 304 approved channels, and every suggested title still passes the safety filter
 - The app does less repeated work when refreshing channels, so it stays light: the refresh preview is capped and the feed is read once instead of again and again
 - The app opens faster: the first videos appear after the first batch instead of waiting for the whole refresh, and the safety filter loads only when needed
 
