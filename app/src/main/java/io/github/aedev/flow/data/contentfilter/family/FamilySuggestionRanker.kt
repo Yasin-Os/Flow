@@ -89,8 +89,7 @@ object FamilySuggestionRanker {
                 video.id.isNotBlank() &&
                     channels.allows(video.channelId, video.channelHandle) &&
                     rule.keepsVideo(video)
-            }
-            .take(limit)
+            }.take(limit)
             .toList()
     }
 
@@ -124,8 +123,7 @@ object FamilySuggestionRanker {
                     { bangladeshiRank(channels, it) },
                     { -it.timestamp },
                 ),
-            )
-            .take(limit)
+            ).take(limit)
     }
 
     /**

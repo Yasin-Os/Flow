@@ -258,7 +258,8 @@ internal class HomeFeedLoader(
                         runCatching {
                             withTimeoutOrNull(FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS) {
                                 val plan = subscriptionFeedRepository.planRefresh(force = false)
-                                subscriptionFeedRepository.refresh(plan)
+                                subscriptionFeedRepository
+                                    .refresh(plan)
                                     .takeWhile { progress -> !progress.finished && progress.videos.size < HOME_TARGET_SIZE }
                                     .collect()
                             }

@@ -17,9 +17,21 @@ class FamilySuggestionRankerTest {
                 FamilyChannel(channelId = "UCcartoon", handle = "@cartoon", name = "Cartoons", category = "cartoons"),
                 FamilyChannel(channelId = "UCplain", handle = "@plain", name = "Plain"),
                 FamilyChannel(channelId = "UCwazbd", handle = "@wazbd", name = "Waz BD", category = "waz", isBangladeshi = true),
-                FamilyChannel(channelId = "UCtilawatbd", handle = "@tilawatbd", name = "Tilawat BD", category = "tilawat", isBangladeshi = true),
+                FamilyChannel(
+                    channelId = "UCtilawatbd",
+                    handle = "@tilawatbd",
+                    name = "Tilawat BD",
+                    category = "tilawat",
+                    isBangladeshi = true,
+                ),
                 FamilyChannel(channelId = "UCnewsbd", handle = "@newsbd", name = "News BD", category = "news", isBangladeshi = true),
-                FamilyChannel(channelId = "UCcartoonbd", handle = "@cartoonbd", name = "Cartoons BD", category = "cartoons", isBangladeshi = true),
+                FamilyChannel(
+                    channelId = "UCcartoonbd",
+                    handle = "@cartoonbd",
+                    name = "Cartoons BD",
+                    category = "cartoons",
+                    isBangladeshi = true,
+                ),
                 FamilyChannel(channelId = "UCplainbd", handle = "@plainbd", name = "Plain BD", isBangladeshi = true),
             ),
         )
