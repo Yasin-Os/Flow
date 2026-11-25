@@ -77,33 +77,42 @@ import java.util.Locale
  * `جنس`) and with a feminine `ة` suffix (`رقصة` matches `رقص`).
  */
 class FamilyTextMatcher(
-    hardTerms: List<String>,
-    entertainmentTerms: List<String>,
-    customTerms: Set<String>,
-    viceTerms: List<String> = emptyList(),
+    private val hardTerms: List<String>,
+    private val entertainmentTerms: List<String>,
+    private val customTerms: Set<String>,
+    private val viceTerms: List<String> = emptyList(),
 ) {
-    private val hardPattern = buildPattern(hardTerms)
-    private val entertainmentPattern = buildPattern(entertainmentTerms + customTerms)
-    private val entertainmentPatternExemptDrama =
+    /**
+     * Compiled lazily, not in the constructor: the merged lists hold ~2,300 terms and
+     * each becomes a large alternation, so building these patterns at construction
+     * stalls the main thread when the repository is injected at startup. The first
+     * match runs on a background thread (feed load, search), and pays the one-time
+     * compile there instead. `by lazy` is thread-safe, so concurrent first uses
+     * compile once.
+     */
+    private val hardPattern by lazy { buildPattern(hardTerms) }
+    private val entertainmentPattern by lazy { buildPattern(entertainmentTerms + customTerms) }
+    private val entertainmentPatternExemptDrama by lazy {
         buildPattern(
             (entertainmentTerms + customTerms)
                 .map { normalize(it) }
                 .distinct()
                 .filter { it !in DRAMA_AND_FILM_WORDS_NORMALIZED },
         )
-    private val vicePattern = buildPattern(viceTerms)
-    private val exemptionPattern = buildPattern(ISLAMIC_EXEMPTION_MARKERS)
-    private val stripPattern = buildPattern(STRIP_BEFORE_MATCH)
+    }
+    private val vicePattern by lazy { buildPattern(viceTerms) }
+    private val exemptionPattern by lazy { buildPattern(ISLAMIC_EXEMPTION_MARKERS) }
+    private val stripPattern by lazy { buildPattern(STRIP_BEFORE_MATCH) }
 
     /**
-     * True when no tier has any words, so nothing can match. The exemption
-     * markers are not a tier — they only excuse a vice match — so they do
-     * not count here; otherwise even [EMPTY] would report non-empty.
+     * True when no tier has any words, so nothing can match. Read from the term lists,
+     * not the patterns, so asking it never triggers a compile: the feed's exclusions
+     * check this on the launch path before any text is matched.
      */
     val isEmpty: Boolean
         get() =
-            hardPattern == null && entertainmentPattern == null &&
-                vicePattern == null
+            hardTerms.isEmpty() && entertainmentTerms.isEmpty() &&
+                customTerms.isEmpty() && viceTerms.isEmpty()
 
     /** The hard tier only: explicit/sexual terms. */
     fun blocksHard(text: String): Boolean = hardPattern?.containsMatchIn(strippedNormalized(text)) == true
