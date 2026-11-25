@@ -59,14 +59,15 @@ class FamilySuggestionRankerTest {
                 video("tilawat", "UCtilawat", "Surah Al-Baqarah", timestamp = 3_000L),
                 video("waz-new", "UCwaz", "Tafsir Mahfil", timestamp = 7_000L),
             )
-        assertThat(ranked.map { it.id }).containsExactly(
-            "ghazal-new",
-            "waz-new",
-            "tilawat",
-            "waz-old",
-            "cartoon-old",
-            "news-new",
-        ).inOrder()
+        assertThat(ranked.map { it.id })
+            .containsExactly(
+                "ghazal-new",
+                "waz-new",
+                "tilawat",
+                "waz-old",
+                "cartoon-old",
+                "news-new",
+            ).inOrder()
     }
 
     @Test
