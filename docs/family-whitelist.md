@@ -8,30 +8,40 @@ on the list and that does not pass the open-search rule. Every entry is keyed by
 verified YouTube channel id (`UC…`); the handle is a fallback only. A blank handle
 means no handle could be confirmed — the id is the match key.
 
-**Counts (243 channels): waz 65 (48 + 17 media) · Ummah Network 1 · ghazal 44 · tilawat 22 ·
-cartoons 8 · comedy 5 · drama 2 · news 96**
+**Counts (304 channels): waz 79 (48 + 31 media) · Ummah Network 1 · ghazal 63 · tilawat 24 ·
+cartoons 9 · comedy 2 · drama 2 · news 96 · tour 28**
 
-**Bangladeshi vs foreign (round 6): 90 Bangladeshi, 153 foreign.** Bangladeshi entries
-carry `isBangladeshi = true` in the seed (waz 25 · ghazal 15 · tilawat 3 · cartoons 3 ·
-news 43 · ummah 1); the home feed and the suggestions lane rank Bangladeshi videos
+**Bangladeshi vs foreign (round 7): 204 Bangladeshi, 100 foreign.** Bangladeshi entries
+carry `isBangladeshi = true` in the seed (waz 56 · ghazal 48 · tilawat 5 · cartoons 6 ·
+comedy 0 · drama 1 · news 59 · tour 28 · ummah 1); the home feed and the suggestions lane rank Bangladeshi videos
 before foreign ones **inside each category tier** (waz/tilawat/ghazal first, news last),
-newest first within each step. The other 153 carry no marker and rank as foreign,
-including 7 genuinely uncertain ones deliberately left unboosted. Ranking never
-changes what is allowed: the whitelist and the blocklist still decide that.
+newest first within each step. The other 100 carry no marker and rank as foreign. The 7
+channels round 6 left uncertain are resolved: Jannat TV, Wafaa Madiha, MELODIANS and Eagle
+Islamic Natok are Bangladeshi; RUH Nasheeds, Rayan Al-Kurdy and The path of islam are foreign.
+Ranking never changes what is allowed: the whitelist and the blocklist still decide that.
+
+Round 7 rebuilt the seed to 304 channels (100 foreign, 204 Bangladeshi): 49 foreign
+channels pruned (see "Removed from the seed (round 7)" below) and 110 Bangladeshi channels
+added — waz 31, ghazal 30, tilawat 2, cartoons 3, news 16, tour 28 — every one verified by
+its YouTube channel id. The 500 target was not reached: of Gemini's 320 proposed channels,
+only 110 verified as real, fitting Bangladeshi channels (185 handles did not resolve, 22
+failed the halal-scope check); no unfitting channel was added to pad the count.
 
 The shipped seed list is `app/src/main/java/io/github/aedev/flow/data/contentfilter/family/FamilySeedChannels.kt`.
-Existing installs gain new channels through the seed merge (`SEED_VERSION = 6`); a
+Existing installs gain new channels through the seed merge (`SEED_VERSION = 7`); a
 channel the PIN holder removed is never re-added, and ids the seed dropped
 (`REMOVED_SEED_IDS`) are pruned from existing installs. The merge also refreshes each
 stored entry's `category` and `isBangladeshi` marker from its seed counterpart. News entries carry `category = "news"`:
 they are whitelisted for news, but the entertainment-tier title filter still applies to
-their videos, so a music/drama upload from a news channel is blocked.
+their videos, so a music/drama upload from a news channel is blocked. Tour entries carry
+`category = "tour"`: they are whitelisted for tour/travel only, and the entertainment-tier
+title filter still applies to their videos, exactly like news.
 
 ## Open search (round 4)
 
 Home stays whitelist-only, but search is open to every channel **for these topics
 only**: waz, ghazal/nasheed, tilawat, Islamic cartoons, halal comedy, halal drama,
-news, and Islamic content generally. A video from a channel that is not whitelisted
+news, tour/travel vlogs, and Islamic content generally. A video from a channel that is not whitelisted
 is kept only when its title, description, channel name, or the snippet YouTube
 returns matches one of those topics **and** it passes the blocklist. If the query
 itself matches a topic, the result-side topic gate relaxes to blocklist-only.
@@ -74,39 +84,39 @@ itself carries no topic words.
 | Yaqeen Institute | @yaqeeninstituteofficial | `UC3vHW2h22WE-pNi5WJtRIjg` |
 | Dr Zakir Naik | @drzakirchannel | `UC3YmP7nqf514I1zh1eVbzrA` |
 | Mufti Tariq Masood | @muftitariqmasood | `UCC3pnIpWMVail5J8mvYEiZA` |
-| Mufti Tariq Masood Speeches | @muftitariqmasoodspeeches | `UCumT1HMTXegYzESyPKH3pVg` |
 | Anisur Rahman Ashrafi | @anisurrahmanashrafiofficial | `UCxBsm13Dkj4oIeCiVGxUtPw` |
 | Bilal Philips | @aabphilips | `UCk1-R7Mmzd7iikof378dcuA` |
 | Ajmal Raza Qadri | @muhammdajmalrazaqadriofficial | `UCxhWp1FeSSx6qbb2f4ohoBg` |
 | Assim Al-Hakeem | @assimalhakeem | `UCWsdcrre0WbCWML_PnuzoAg` |
-| DarulIftaaUK | @DarulIftaaUK | `UCYfp61fUZLuAZyO4MgrJZ_Q` |
 | Zaytuna College | @zaytunacollege | `UC88lF82aS_VW3oJe7GV5zsA` |
-| ZamZam Academy | @ZamZamAcademy | `UC__HMOrvqZ6NwPuDG_2Fmow` |
-| Ask Mufti Tariq Masood | @askmuftitariqmasood | `UCnAsQQqfuBi1NJ8r4wcpr3A` |
-| Mufti Tariq Masood Special | @muftitariqmasoodspecial | `UC-Vsetv02QQ8ALtwoZTwdDQ` |
 | OnePath Network | @onepathnetwork | `UCQHRLH8RQIrdGWMhf5heWiA` |
-| Digital Mimbar | @khalifahklothing | `UCyxM7MgZkDe5stZpb6CiOcA` |
-| Jannah Institute | @jannahinstitute | `UCx1Zr8zUKUHUtHEVq09b5vg` |
 | FreeQuranEducation | @freequraneducation | `UCNdUFOtzSx3FS71pHkQLxhQ` |
-| Saad Tasleem | @saadtasleem | `UCGzdb458mefm-8w-kV_qv6g` |
 | MercifulServant | @themercifulservant | `UCHGAqdQBKTVON_FUCIYCh3Q` |
 | AlMaghrib Institute | @almaghribinstitutetv | `UC1B7kOnMRdPuP0rxW6mS7_A` |
-| One Message Foundation | @onemessagefoundation | `UCvJyEIx_it2jFYP5M1OzGng` |
-| Safina Society | @safinasociety | `UC2cX3SmsdWsrRS8t_5zvzEw` |
-| Sabeel Ahmed | @sabeelislam | `UClx9GdAkydj7Lgu9DbFmY6w` |
-| Sapience Institute | @sapienceinstitute | `UCeZBhrU8xHcik0ZgtDwjsdA` |
-| One Islam Productions | @oneislamproductions | `UCTX8ZbNDi_HBoyjTWRw9fAg` |
 | Huda TV | @hudatvchannel | `UCIVSdtXb4pR57BDqKKNqsTg` |
 | Muslim Central | @muslimcentral | `UCz4AXmFeSbi-0vPXI102Q5w` |
-| Majed Mahmoud | @majedmahmoud | `UCtsN0omQRQ3_XgnLNioqxPQ` |
-| TheDeenShowTV | @thedeenshowtv | `UCXHz5brnR9qwqvQvF3VJdgQ` |
-| Qalam Institute | @qalaminstitute | `UCVp5Ze24V2iFiUY1y0WtRaA` |
-| Miftaah Institute | @miftaahinstitute | `UCYr_FKFkc_pJq_sMKuaktnw` |
 | The Muslim Lantern | @themuslimlantern | `UCeCAQhKbU2ETNWxWxB94HgA` |
 | Dr Farhat Hashmi Official | @drfarhathashmiofficial | `UCFnsCaT_2VKBg_SoGjhO1nA` |
 | Belal Assaad | @belal.assaad | `UC34dxKHa9n9ggxz4m7bztfA` |
+| Dr. Imam Hossain | @DrImamHossain | `UC8bmdsHjNcGQWfNw5XosWXw` |
+| Hafizur Rahman Siddiki | @HafizurRahmanSiddiki | `UCEtfX5Ojp2snK5AG2mj0Y3A` |
+| Maulana Abdullah Al Amin | @AbdullahAlAminOfficial | `UCdyN9diytljkZ-PCDpwy8zg` |
+| Maulana Enayetullah Abbasi | @EnayetullahAbbasi | `UCGOGMpwxF_GwD8eqoDjANQQ` |
+| Maulana Golam Rabbani Juktibadi | @GolamRabbaniJuktibadi | `UCPwN-jfA_EUZELi0Z4RZYwg` |
+| Maulana Habibur Rahman Juktibadi | @HabiburRahmanJuktibadi | `UCKZN8S7P-scqYRxk7rkKk4A` |
+| Maulana Jubayer Ahmad Ansari | @JubayerAhmadAnsari | `UCm7_KTkbtkm0E5edK0w8veQ` |
+| Maulana Junayed Al Habib | @JunayedAlHabib | `UC76l0Vhq_JARusa5n3US_Iw` |
+| Maulana Lutfor Rahman | @MaulanaLutforRahman | `UCs3Nnyrt7EoAhSUtfLWtuog` |
+| Maulana Monirul Islam | @MaulanaMonirulIslam | `UCf4q5fmsXV90UzKur2JsIcw` |
+| Maulana Nasir Uddin Juktibadi | @NasirUddinJuktibadi | `UC8F6enSK-2SsZJ11HhTDbCw` |
+| Maulana Tarek Monowar | @TarekMonowar | `UCYWEw1PqTKdMxArOoKbE8fw` |
+| Mufti Kazi Ibrahim | @MuftiKaziIbrahim | `UCSktIz9t3z3Twx5lcjGaG_A` |
+| Mufti Tariqul Islam | @MuftiTariqulIslam | `UCB_RSLhbVX_guW3ECAL8KGg` |
+| Shaykh Abdur Razzak Bin Yousuf | @AbdurRazzakBinYousuf | `UC1yRTbHdVBo6mDs5WNdfYrw` |
+| Shaykh Amanullah Bin Ismail Madani | @AmanullahMadani | `UCKy829QeyVFhYOG4ZZVNUnw` |
+| Shaykh Motiur Rahman Madani | @MotiurRahmanMadani | `UCntbI4E9OT3K90JJ-AOYp9A` |
 
-## Waz — media channels — 17
+## Waz — media channels — 31
 
 These speakers have no personal official channel, so their waz lives on media/fan
 channels. The user decided (2026-11-24) that official channels are not required for
@@ -132,6 +142,20 @@ speakers, and some carry political content (see the content notes).
 | Yasmin Mogahed | @yasminmogahedonline | `UCjr67rJYy3mtZgF-hx6lQhA` |
 | Dr Israr Ahmed (Khaaksaar archive) | @khaaksaar | `UCM9vZ7ix3A6pmcXwEnId7nw` |
 | ahb bangla waz (Jamshed Majumdar) | — | `UC9ZrdatGkN4hgwsKQQIh8JQ` |
+| Alor Porosh | @AlorPoroshBD | `UCOrxjKSVYQVYxTT_BOyn4Tg` |
+| As-Sunnah Foundation | @AsSunnahFoundation | `UCBUueX0wDWnC0qr1zbXq0PA` |
+| Bangla Islamic Lecture | @BanglaIslamicLecture | `UCUnuyrDUwl0Ef9YmpIX4QWA` |
+| Bangla Waz TV | @BanglaWazTV | `UCC8O9Tz9_WaiDCFXaGaQm-A` |
+| Baseera | @BaseeraMedia | `UCLkXpkmKHzxIzfaAIaYbesg` |
+| Dawatul Islam BD | @DawatulIslamBD | `UCpmcH61LVWL96ThTs047oJg` |
+| Imani Jikir | @ImaniJikir | `UCYtZ36QE-bqQzx0MVyj463Q` |
+| Islami Zindegi | @IslamiZindegi | `UCzbXMEWTbH8Rphi2nNkNqQg` |
+| Markazud Dawah Al Islamia | @MarkazudDawah | `UCv0k4AqKz9S95YP9cR5uhBA` |
+| NKBD Islamic | @NKBD | `UCcxQ-G65x2_m5eCm5HwdGPg` |
+| Peace TV Bangla Official | @PeaceTVBangla | `UCWovh_R7ca13BmXMLib-g2A` |
+| Taqwa Group | @TaqwaGroup | `UCSzp1NxiuSyvlVXT5OaGUow` |
+| Tawheed Media BD | @TawheedMediaBD | `UC5hXlNhwO_wihUsDEkg7tzw` |
+| Way To Jannah | @WayToJannahBD | `UC8FnuNIy2eknee9Msxtd6dA` |
 
 ## Ummah Network — 1
 
@@ -144,7 +168,7 @@ below: the Jamestown Foundation (Feb 2020) identifies Tamim al-Adnani as spiritu
 of ABT/Ansar al-Islam, the official al-Qaeda in the Indian Subcontinent (AQIS) branch,
 and SecDev KIRON (Oct 2024) calls Ummah Network "AQIS's most popular Bangla channel".
 
-## Ghazal / nasheed — 44
+## Ghazal / nasheed — 63
 
 Kalarab has no separate channel — its YouTube presence is Holy Tune, already listed.
 
@@ -153,31 +177,20 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | Holy Tune | @holytunebdofficial | `UCUNkaUjhRArzU4Tm_TPSDlg` |
 | Arafah Records | @arafahrecord | `UCdbosF4YCI_CR_ZLmXO9aQQ` |
 | Omar Esa (vocals-only) | @OmarEsa | `UC4d8OKjmN_ggVVbo00DM_3Q` |
-| Siedd (vocals-only) | @sieddofficial | `UC9Jrzve0dhPoo_LexakSFMw` |
-| Ilyas Mao (vocals-only) | @ilyasmao | `UCpigf8GfwA6lU8f9VRbCv8g` |
-| Firas (vocals-only) | @firasvocals | `UC8-_GbgsWcUmZCpWGsC3QvA` |
-| Safe Adam (vocals-only) | @SafeAdam | `UCOP4D0JslF9wFvc7x4rqh3A` |
-| Labbayk (UK, acappella) | @labbayk | `UC7oYY3yXJKw7ZU7ORlNOF2A` |
-| Muad (vocals-only) | @muadmusic | `UCJZS2p3jZ_T8TiUMVE6bvVQ` |
 | Ahmed Bukhatir | @ahmedbukhatir | `UC-2pqFUafqKCnACEfQasZGg` |
 | Baraa Masoud | @baraamasoudofficial | `UCoGJqzgYwpWoc_unl6UJNIg` |
-| Mikhaael Mala | @MikhaaelMala | `UCTC4dW158I7bmI-N-Oh2jEA` |
 | Ehsaan Tahmid | @ehsaantahmid | `UC0OQYbUkGVfH1Idvvzq73xg` |
-| Sintesa | @sintesaofficial | `UCsDrzNjBfjkyiicDskWp_mg` |
 | Maher Zain | @maherzain | `UCMBXjVFU51CJ047U1Wp3JKQ` |
 | Zain Bhikha | @zainbhikhaofficial | `UCTV8sHvXq5VUiTGfZv9JWjg` |
 | Sami Yusuf | @samiyusuf | `UCMBNjDVgy1lc_FyePVg60_Q` |
 | Harris J Official | @harrisjofficial | `UCkZCizaUsLNC-T_osXPiElw` |
 | Humood AlKhudher | @humoodalkhudher | `UCB9Iev_eM4rQBlaaVr0qVxw` |
 | Milad Raza Qadri | @miladrazaqadri | `UCumITGFd8ACCnmbNp9G3GlA` |
-| Castillo Nasheeds | @castillonasheedsofficial | `UCIqEQQFrIuK4uLIa3VCNeug` |
 | Native Deen | @nativedeen | `UCU0ngFlg5tmFfLYs_dAdMaQ` |
 | Mesut Kurtis | @officialmesutkurtis | `UCzVyRGnKoxIXPxnx31ZfiOQ` |
 | Raef | @raefmusic | `UCa706fvxuVPvs-4ZgI95_MQ` |
 | Owais Raza Qadri | — | `UCyvdo5fpPSnidSsM-c7F9wg` |
 | Junaid Jamshed | — | `UCNA2F7_fAFF3ypRqybx25bg` |
-| UNIC | @unic2002 | `UC0Fq9qaJ50wxu8XLmN-i-NQ` |
-| Inteam Digital | @inteamdigital | `UCOrEH-SzmP_Nmipsk0yfzMg` |
 | Iqra Shilpigosthi | @iqrashilpigosthi | `UCdAan1vkVv8kBP53CNtQFTQ` |
 | Sayed Ahmad (Kalarab director) | — | `UCS_J2_PgM1491XV6RUj-OlQ` |
 | Tawhid Jamil | @tawhidjamil | `UC2gW2ZBhwsv7hZuGIl8kblA` |
@@ -194,8 +207,38 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | Rupali Kontho | @rupalikonthoofficial | `UCqXSt1wn-B4yiRqP6LP7DnQ` |
 | Tune Hut | @tunehutbd | `UCH8-OZqsPn3EE9F0RvWETMw` |
 | Heaven Tune | @heaventuneofficial | `UC25qUhs_TrcUsJ5E5UeWtsg` |
+| Abdul Muin | @AbdulMuinOfficial | `UCuZ1w3dmhV2eD5hWnU8UYaw` |
+| AH ALAMGIR MEDIA | @AHAlamgirMedia | `UChZmNC_p0Z_ToCDBMdkAD7Q` |
+| Ahmad Abdullah | @AhmadAbdullahOfficial | `UC71ip_oj2fHC5KHxrHky3Rw` |
+| Al Nur Mahfil | @AlNurMahfil | `UCHB63EwZAcXGA7uaHlfahnw` |
+| Al-Hera Shilpigosthi | @AlHeraShilpigosthi | `UC1jWiwBjY43rXWcW2XH5QmQ` |
+| Al-Madina Tune | @AlMadinaTune | `UCoqdyF7EqvRS0kxYucMHiMg` |
+| Dishari Shilpigosthi | @DishariShilpigosthi | `UCRiPtI4PF50ZwUO3pO1XEHQ` |
+| Holy Light | @HolyLightBD | `UCIeMnFaiEe7yZcEWp1uO1xQ` |
+| Husain Adnan | @HusainAdnan | `UCGrYQSPE4a1eqrmKZBxjvSA` |
+| Iman Tune | @ImanTune | `UCBCe8DRXNqPcW80DKHP0MTQ` |
+| Imtiaz Masrur | @ImtiazMasrur | `UCBSAN1ie3xrZ4HihralQ5Iw` |
+| Jannat Contents | @JannatContents | `UC8w3Ghds4Y44Gn8DMTHxypQ` |
+| Jannati Sur | @JannatiSur | `UCpzl2Gibj-h17M5jIAvr9WA` |
+| Kalarab Shilpigosthi | @KalarabShilpigosthi | `UCU2OWmIElo3iXBtt6xkAeZQ` |
+| Khatune Jannat Tv | @KhatuneJannatTv | `UCarRaVvB6v4Vtvb3Yd2v_Dg` |
+| Muhammad Badruzzaman | @MuhammadBadruzzaman | `UCLMxoW8SigspctaZ0_aVibg` |
+| Munaem Billah Official | @MunaemBillahOfficial | `UCJtffV27Lt8jkTnwae4t0Iw` |
+| Nasheed Bangladesh | @NasheedBangladesh | `UCI9ZGVISdiJjGpGRP9_Nd3g` |
+| Nasheed Forum | @NasheedForum | `UCD8iu6DCtpoQavX9aTLtpdw` |
+| Noor Tune | @NoorTuneBD | `UCQ-dHa73_OJrwfPUNkNBIDw` |
+| PEACE Nasheed Studio | @PEACENasheedStudio | `UCNePUxuLwlEEJ5QLOK5AJ_Q` |
+| Qalb Nasheed | @QalbNasheed | `UCwWDgcaX02RwI6iH1SKdj1g` |
+| Rahmat Tune | @RahmatTune | `UCdkZEvJ4IMDLMkBv5VVgGwQ` |
+| Saimum Shilpigosthi | @SaimumShilpigosthi | `UCkbRot9IE6Y202qg8Wl9OqQ` |
+| Surer Tori | @SurerTori | `UCkiML_Lqs-9XJTb2vUjxiGQ` |
+| Taqwa Tune | @TaqwaTune | `UCEPQ4hYMLNMA8wqQTcXI8rA` |
+| Titas Shilpigosthi | @TitasShilpigosthi | `UCXxLz1w58lhIMb1zN58dJDA` |
+| Tune of Islam | @TuneOfIslamBD | `UCWrZcUUzjjvTGhoUSPGkLmQ` |
+| Yeasin Hayder | @YeasinHayder | `UCxOqiRd6p8f1NXxAE28gp4Q` |
+| Zikrian Records | @ZikrianRecords | `UCYJzmptqs19aHlnfqHGwNBA` |
 
-## Tilawat — 22
+## Tilawat — 24
 
 | Channel | Handle | Channel id |
 |---|---|---|
@@ -221,8 +264,10 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | Abdul Wali Al-Arkani | @walialarkani | `UCYiRbuBnCTBctL1XzA6UrsQ` |
 | Rayan Al-Kurdy | — | `UCAPBipTFl6k_O90DEOJLvFw` |
 | Shamsul Haque | @shamsul_haque | `UC4XAyY0HcNirlm78BlGLiLA` |
+| Bangla Quran Recitation | @BanglaQuranRecitation | `UCWnSIJFnJCuKNoY8Q6XUvUA` |
+| Qari Ahmad Bin Yusuf Al-Azhari | @qariyusufqurantv | `UCEsu0nN6KrcvM00aDGkGx0w` |
 
-## Islamic cartoons — 8
+## Islamic cartoons — 9
 
 | Channel | Handle | Channel id |
 |---|---|---|
@@ -232,18 +277,16 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | IQRA Cartoon Bangla | @iqracartoonbangla | `UCuAyZMb3xHNyfKe4qEDo4kg` |
 | Nobider Kahini | @nobiderkahini-209 | `UCeR1Of2EdepL0-b88e8cJaQ` |
 | Noor Kids | @NoorKids | `UC6bOkPFbfnDNa5v3Kz8Xcbw` |
-| LittleMuslim | @LittleMuslim | `UC4lFkKHO5QEktDNBMhBQ25A` |
-| Learn with Zakaria | @learnwithzakaria | `UCtlcIZVBdFPSAtCoNZsTusg` |
+| Panvision TV | @PanvisionTV | `UC7kuDI4KqxevSKiQGpOLs1w` |
+| Mahir Islamic Network | @mahirislamicnetwork | `UChBxjdHmHE_xFRwCn5oJPkQ` |
+| Prio Cartoon Tube | @priocartoontube | `UCYaB6IGCrXxfjCamI_57b2g` |
 
-## Halal comedy — 5
+## Halal comedy — 2
 
 | Channel | Handle | Channel id |
 |---|---|---|
 | Smile 2 Jannah | @smiletojannah | `UCeccrNGLzk6d0M_vaomD3LQ` |
 | DawoodSAVAGE | @dawoodsavager | `UCs5GRyu3Sz1KVnBEWB43s7g` |
-| Zuhaib Syed | — | `UCXtmVI108qG8GyWBswI7H7A` |
-| Deccani Diaries | @deccanidiaries | `UC6uOx4sVqGNGrmJBUOh0zBg` |
-| Smile2jannah Urdu & Hindi | — | `UCoIRbHvNK8qmjCMdQMbpQCg` |
 
 ## Halal drama / natok — 2
 
@@ -252,6 +295,41 @@ Kalarab has no separate channel — its YouTube presence is Holy Tune, already l
 | Eagle Islamic Natok | @eagleislamicnatok | `UCd5A8poxhdxProarD8AU-bw` |
 | The path of islam | — | `UC816Kbi-g_VtbJH0xRTPN2A` |
 
+## Tour blogs — 28
+
+Tour/travel vlog channels, all Bangladeshi. Whitelisted for tour/travel only — the
+entertainment-tier title filter still applies to their videos, exactly like news.
+
+| Channel | Handle | Channel id |
+|---|---|---|
+| Nadir On The Go - Bangla | @NadirOnTheGoBangla | `UCLZLfy4DVTfpBpylslR_OPQ` |
+| Nadir On The Go | @NadirOnTheGo | `UCqlthGjbLIci7i3x2gk8P4Q` |
+| Salahuddin Sumon | @SalahuddinSumon | `UCFX0lAkJUQwRP19Oi4BN6bA` |
+| Md Fizz | @MdFizz | `UCPOjt2u1E3F26Fjcdwlc6iA` |
+| Rakib Hossain | @RakibHossainvlogs | `UCWJMtvKZjKYCfwMUpAmuP5A` |
+| RS Fahim Chowdhury | @RSFahimChowdhury | `UCcKuu96Qzgn7bi1LTxkKvZg` |
+| Petuk Couple | @PetukCouple | `UCgc5_M1RttS2zaJlswB0F3w` |
+| Rafsan TheChotoBhai | @RafsanTheChotoBhai | `UCxbyDapSavjgvdtpcJ2BJKw` |
+| Food Appi | @FoodAppi | `UCcmHGntaKUcTovfr4hMZnPw` |
+| Mr Mixer's World | @MrMixersWorld | `UCql6nzU1vRapqcL1OVj7pbQ` |
+| Traveler Of Bangladesh | @TravelerOfBangladesh | `UCdGRNVOJdAOVjp4TapiW0Bw` |
+| Araf Intisar Dipto | @ArafIntisarDipto | `UCt_vDfK7BEU1bNOJ3UB_FkA` |
+| Tash Ruva | @TashRuva | `UC8tQfbrNXq4CJn3onK6Fbgw` |
+| Saiful Rubel | @SaifulRubel | `UCYLQk4itlqhydYfOsQn1kqQ` |
+| Travel With Tuhin | @TravelWithTuhin | `UCtv8L_0HMtJdpnpDVYxS1EA` |
+| Travel With Sajib | @TravelWithSajib | `UCbIq1NJhNhjyLCO4EKNgHuQ` |
+| Travel With Fahim | @TravelWithFahim | `UCurOe93SgDH3Pi8K2QLv1bg` |
+| Explore Bangladesh | @ExploreBangladesh | `UCtXG3Ab3TbBGPQ_SZJDN79w` |
+| Beautiful Bangladesh | @BeautifulBangladesh | `UComnqIXlVbeO5n60GdkNqFQ` |
+| Bangla Travel Vlog | @BanglaTravelVlog | `UClqmxmjT-Aipy4NzBx8kgqg` |
+| Solo Traveler BD | @SoloTravelerBD | `UCadnpW_PjoqUfQ9oDFpvWoQ` |
+| Moto Vlogger BD | @MotoVloggerBD | `UCF1SE7jMuqVJijXmpaD601A` |
+| Bike Ride BD | @BikeRideBD | `UCADXcCu5TG-BwftN6VjHhUw` |
+| Bandarban Tour Guide | @BandarbanTourGuide | `UCs7zFYEr5MxjW0L0zHR7xCA` |
+| Gram Banglar Chobi | @GramBanglarChobi | `UCc9_Nz1wUkmaHGHulcHoOrQ` |
+| Desh Vromon | @DeshVromon | `UC0LWcuSlD4JidzXkzX_P45A` |
+| Vromon Guide | @VromonGuide | `UCBdevN8BnXEJorRYVia5zIQ` |
+| Bangla Backpacker | @BanglaBackpacker | `UCV_z455vBbu-VB1Dig_h-Vw` |
 ## News — 96
 
 News channels are whitelisted for news, but the entertainment-tier title filter still
@@ -306,78 +384,75 @@ Channels that are primarily entertainment, not news, were left out (see below).
 | ATN News Live | @atnnewslive | `UCKlhfq1ILoAFav7iw5iCnfA` |
 | Ch24 Bulletin | @channel24bulletin | `UCDESSC7DwGTi8PW16UOlPgA` |
 | Independent Bulletin | @independentbulletin | `UCxOY5cyVG24PftM2RPw-8JA` |
-
-### International / Islamic news — 54
-
-| Channel | Handle | Channel id |
-|---|---|---|
 | Al Jazeera English | @aljazeeraenglish | `UCNye-wNBqNL5ZzHSJj3l8Bg` |
 | Al Jazeera Arabic | @aljazeera | `UCfiwzLy-8yKzIbsmZTzxDgw` |
-| AJ Mubasher | @aljazeeramubasher | `UCCv1Pd24oPErw5S7zJWltnQ` |
-| Al Jazeera Balkans | @ajbalkans | `UC_yXEx3-Gk5drg9qhPzSQSg` |
 | BBC News | @bbcnews | `UC16niRr50-MSBwiO3YDb3RA` |
 | BBC News Arabic | @bbcnewsarabic | `UCelk6aHijZq-GJBBB9YpReA` |
-| BBC News Urdu | @bbcurdu | `UCvm8V4Dwtz0fbPGbpk7RYAg` |
 | CNN | @cnn | `UCupvZG-5ko_eiXAupbDfxWw` |
 | Sky News | @skynews | `UCoMdktPbSTixAyNGwb-UYkQ` |
 | Sky News Arabia | @skynewsarabia | `UCIJXOvggjKtCagMfxvcCzAA` |
 | TRT World | @trtworld | `UC7fWeaHhqgM4Ry-RMpM2YYw` |
-| TRT Arabi | @trtarabi | `UC5GvVahlgulCyo4cshSmbcg` |
 | FRANCE 24 | @france24 | `UCCCPCZNChQdGa9EkATeye4g` |
 | FRANCE 24 English | @france24_en | `UCQfwfsi5VrQ8yKZ-UWmAEFg` |
-| FRANCE 24 Arabic | @france24_ar | `UCdTyuXgmJkG_O8_75eqej-w` |
 | DW News | @dwnews | `UCknLrEdhRCp1aegoMqRaCZg` |
 | VOA News | @voanews | `UCVSNOxehfALut52NbkfRBaA` |
-| VOA Urdu | — | `UCx8MbRAMH-KNJuFLKdsmZ_w` |
 | NDTV | @ndtv | `UCZFMm1mMw0F81Z37aaEzTUA` |
 | WION | @wion | `UC_gUM8rL-Lrg6O3adPW9K1g` |
 | Geo News | @geonews | `UC_vt34wimdCzdkrzVejwX9g` |
 | ARY News | @arynewstvofficial | `UCMmpLL2ucRHAXbNHiCPyIyg` |
 | DawnNews | — | `UCaxR-D8FjZ-2otbU0_Y2grg` |
-| DawnNews English | @dawnnewsenglish | `UC_xWTNsx7zA2uI0ydQikViA` |
 | Samaa TV | @samaatv | `UCJekW1Vj5fCVEGdye_mBN6Q` |
 | Dunya News | @dunyanewsofficial | `UCnMBV5Iw4WqKILKue1nP6Hg` |
-| PTV News | @ptvnewsofficial | `UC5RvV_LtR1dxPCVFGw6dxXA` |
-| Aaj News | @aajtvofficial | `UCgBAPAcLsh_MAPvJprIz89w` |
-| Express News | @expressnewspkofficial | `UCTur7oM6mLL0rM2k0znuZpQ` |
-| Hum News | @humnewspakistan | `UC0Um3pnZ2WGBEeoA3BX2sKw` |
-| 92 News HD | @92newshdtv | `UCsgC5cbz3DE2Shh34gNKiog` |
 | Al Arabiya | @alarabiya | `UCahpxixMCwoANAftn6IxkTg` |
-| Al Arabiya English | @alarabiyaenglish | `UCIZJ9a6P_nxCFJTmL0gh_IQ` |
 | Middle East Eye | @middleeasteye | `UCR0fZh5SBxxMNYdg0VzRFkg` |
 | The National | @thenationaluaechannel | `UCGYf0VFdlSTzcJghW9z1DAA` |
 | Al Mayadeen News | @almayadeennews | `UC9YbjpvsFZytS0DnO1FnTKw` |
 | i24NEWS English | @i24news_en | `UCvHDpsWKADrDia0c99X37vg` |
-| i24NEWS Français | @i24news_fr | `UCgPYsPyGhhQJQ9zOUQDWDMA` |
 | Anadolu Agency | @anadoluajansi | `UCVbZYhcirOke2vipxs4lT2w` |
 | A Haber | @ahaber | `UCKQhfw-lzz0uKnE1fY1PsAA` |
-| NTV Turkey | @ntv | `UC9TDTjbOjFB9jADmPhSAPsw` |
 | euronews | @euronews | `UCSrZ3UV4jOidv8ppoVuvW9Q` |
 | CGTN | @cgtn | `UCgrNz-aDmcr2uuto8_DL2jg` |
 | NHK WORLD-JAPAN | @nhkworldjapan | `UCSPEjw8F2nQDtmUKPFNF7_A` |
 | ABC News Australia | @abcnewsaustralia | `UCVgO39Bk5sMo66-6o6Spn6Q` |
 | CBC News | @cbcnews | `UCuFFtHWoLl5fauMMD5Ww2jA` |
-| CBC The National | @cbcthenational | `UCKjU3KzdbJE1EFcHVqXC3_g` |
 | ITV News | @itvnews | `UCFQgi22Ht00CpaOQLtvZx2A` |
 | Channel 4 News | @channel4news | `UCTrQ7HXWRRxr7OsOtodr2_w` |
 | Islam Channel | @islamchanneltv | `UCggJmYhtxBk1naIbZN541pw` |
 | 5Pillars | @5pillars | `UCl791j-PxhtLRyRUi2aP9jQ` |
 | Muslim Network TV | @muslimnetworktv | `UC8LjaLk1FQaIIzZMaRF9ujw` |
 | IQRA TV | @iqratv | `UCMyzboNfTPpbHFKI49Jhxxg` |
+| Channel i News | @ChanneliNews | `UC8NcXMG3A3f2aFQyGTpSNww` |
+| SATV News | @SATVNews | `UCMMCiB3he7fwFUvLBRMTaZQ` |
+| Bijoy TV | @BijoyTV | `UCzAhx09RalPUWWwyEGtJjHA` |
+| Green TV | @GreenTVBangladesh | `UC_guXhnGw8qfYmYeACTKB2A` |
+| The Business Standard | @TheBusinessStandard | `UCUNEzmQ3zcifrhn0HwCgjYg` |
+| Dhaka Tribune | @DhakaTribune | `UCB58cDLM3zZlgV6iIG9bdoQ` |
+| Daily Desh Rupantor | @DeshRupantor | `UCMbO-c2g92KPgOzYKDsTbug` |
+| Daily Protidiner Bangladesh | @ProtidinerBangladesh | `UC7PwfNI2zuokhCctN9VymLg` |
+| Jago News 24 | @JagoNews24 | `UCWJkfdG6J2HUxOHrORuHZ2g` |
+| Sarabangla | @Sarabangla | `UCM7OnoexX8BYTX0js8Yf-kw` |
+| Barta24 | @Barta24 | `UCqhC0YFetNVYsCJR3nPCSQQ` |
+| DBC News Live | @DBCNewsLive | `UCNUncsqLnaOKz1jQ9cDjKSw` |
+| Pinaki Bhattacharya | @PinakiBhattacharya | `UCUbtdbJRpaXiUI_IlBOvPpA` |
+| Elias Hossain | @EliasHossain | `UClURnTgQiQpldGhtD4Fc7JQ` |
+| Maasranga News | @MaasrangaNewsBD | `UCHR-p802PibDYG1btNJcOew` |
+| Banglanews24 | @Banglanews24-Youtube | `UCzfkD4dNxVlIhUW3xaM4uxw` |
+
+### International / Islamic news — 54
+
+| Channel | Handle | Channel id |
+|---|---|---|
 
 ## Content notes — channels on the list with a caveat
 
 These channels are whitelisted, but the PIN holder should know what else they carry:
 
-- **Waz:** Assim Al-Hakeem, Huda TV, Mufti Tariq Masood Special — fatwa Q&A that
-  sometimes covers sensitive fiqh topics. OnePath Network, MercifulServant,
-  Muslim Central, One Islam Productions — also documentaries, news/current-affairs
-  or end-times content, not waz only. One Message Foundation, The Muslim Lantern —
-  confrontational street-dawah/debate style. Sapience Institute — academic
-  apologetics, not traditional waz. Safina Society, Sabeel Ahmed, TheDeenShowTV —
-  interfaith/talk-show material with non-Muslim guests on camera.
+- **Waz:** Assim Al-Hakeem, Huda TV — fatwa Q&A that sometimes covers sensitive fiqh
+  topics. OnePath Network, MercifulServant, Muslim Central — also documentaries,
+  news/current-affairs or end-times content, not waz only. The Muslim Lantern —
+  confrontational street-dawah/debate style.
 - **Ghazal:** Maher Zain, Zain Bhikha, Sami Yusuf, Harris J, Humood AlKhudher,
-  Milad Raza Qadri, Mesut Kurtis, Raef, UNIC, Inteam Digital, Native Deen, Rajiya
+  Milad Raza Qadri, Mesut Kurtis, Raef, Native Deen, Rajiya
   Risha, Tune Hut, Heaven Tune, Rupali Kontho — full instrumental production on
   many tracks (vocals-only versions also exist on several of these channels).
   Junaid Jamshed's channel also carries non-naat uploads (pop song, qawwali).
@@ -385,12 +460,8 @@ These channels are whitelisted, but the PIN holder should know what else they ca
   tilawat with nasheed and other videos. RUH Nasheeds features a female vocalist
   on some tracks. Wafaa Madiha also carries family vlogs.
 - **Cartoons:** Omar & Hana episodes use music, but many "[NO INSTRUMENTS]"
-  versions exist on the channel. Learn with Zakaria — some newer songs may have
-  music; spot-check. LittleMuslim's handle is unconfirmed (the id is confirmed).
+  versions exist on the channel.
 - **Comedy:** DawoodSAVAGE's "Muslim Rap Battle" series uses music/rap beats.
-  Deccani Diaries — general Hyderabadi Muslim comedy, not explicitly halal-branded;
-  background music may appear in some videos. Smile2jannah Urdu & Hindi is
-  apologetics/current-affairs reaction with humour, not comedy skits.
 - **Drama:** Eagle Islamic Natok — mixed-gender family dramas, background music is
   standard in the genre. The path of islam — animated moral/cartoon stories.
 - **Waz, low-content entries:** Mufti Amir Hamza's official channel is dormant
@@ -410,13 +481,14 @@ These channels are whitelisted, but the PIN holder should know what else they ca
 - **News:** several listed news channels also carry entertainment — ATN Bangla News,
   mytv, Mohona TV, Bangla TV, BTV, TBN24, Prothom Alo, Dhaka Post, Samakal; the
   entertainment title filter still applies to every news channel. The
-  mainly-entertainment channels (Deepto TV, Channel i, Maasranga, Asian TV, BIJOY TV,
+  mainly-entertainment channels (Deepto TV, Channel i, Asian TV, BIJOY TV,
   SATV, Ekushey TV) were left out entirely — only their news arms, where one exists,
-  are listed. DW বাংলা has sexually explicit titles among its most-viewed videos;
+  are listed. Maasranga News is listed (its entertainment arm Maasranga TV is not).
+  DW বাংলা has sexually explicit titles among its most-viewed videos;
   those titles are caught by the hard tier. VOA News and VOA বাংলা look dormant
-  (newest videos ~early 2025); their archives stay. BBC News Arabic and FRANCE 24
-  Arabic were verified through second-hand sources (their YouTube pages
-  returned empty text) — spot-check them in the app.
+  (newest videos ~early 2025); their archives stay. BBC News Arabic was verified
+  through a second-hand source (its YouTube page returned empty text) — spot-check
+  it in the app.
 
 ## Removed from the seed (round 4)
 
@@ -425,11 +497,36 @@ These channels are whitelisted, but the PIN holder should know what else they ca
   @presstv belongs to a random person — no live official channel exists under this
   id. Removed from the seed and pruned from existing installs (`REMOVED_SEED_IDS`).
 
+
+## Removed from the seed (round 7)
+
+Round 7 pruned 49 foreign channels to reach 100 foreign / 204 Bangladeshi (the 500
+target was not reached). Removed from the seed and pruned from existing installs
+(`REMOVED_SEED_IDS`):
+
+- **Waz (17):** Mufti Tariq Masood Speeches, DarulIftaaUK, ZamZam Academy, Ask Mufti Tariq
+  Masood, Mufti Tariq Masood Special, Digital Mimbar, Jannah Institute, Saad Tasleem, One
+  Message Foundation, Safina Society, Sabeel Ahmed, Sapience Institute, One Islam
+  Productions, Majed Mahmoud, TheDeenShowTV, Qalam Institute, Miftaah Institute —
+  spinoff/media channels of kept speakers and smaller foreign institutes.
+- **Ghazal / nasheed (11):** Siedd, Ilyas Mao, Firas, Safe Adam, Labbayk (UK), Muad,
+  Mikhaael Mala, Sintesa, Castillo Nasheeds, UNIC, Inteam Digital — smaller foreign
+  nasheed channels.
+- **Cartoons (2):** LittleMuslim, Learn with Zakaria — smaller foreign channels.
+- **Comedy (3):** Zuhaib Syed, Deccani Diaries, Smile2jannah Urdu & Hindi — smaller
+  foreign comedy channels.
+- **News (16):** Al Jazeera Balkans, TRT Arabi, FRANCE 24 Arabic, VOA Urdu, DawnNews
+  English, PTV News, Aaj News, Express News, Hum News, 92 News HD, i24NEWS Français,
+  NTV Turkey, plus AJ Mubasher (redundant with kept Al Jazeera Arabic), BBC News Urdu
+  (redundant with kept BBC News / BBC News Arabic), Al Arabiya English (redundant with
+  kept Al Arabiya) and CBC The National (redundant with kept CBC News).
+
 ## Explicitly NOT whitelisted
 
 - **News channels left out (primarily entertainment, not news):** Deepto TV (its news
-  arm Deepto News is listed), Channel i, Maasranga TV, Asian Television, BIJOY TV,
-  SATV, Ekushey TV — their top videos are natok, movies, music and dance shows.
+  arm Deepto News is listed), Channel i, Maasranga TV (its news arm Maasranga News is
+  listed), Asian Television, BIJOY TV, SATV, Ekushey TV — their top videos are natok,
+  movies, music and dance shows.
 - **No YouTube channel:** RT English (blocked globally by YouTube, 2022), Al Manar TV
   (banned from YouTube), Peace TV (no official YouTube channel found), British Muslim
   TV (channel exists but no UC id could be found). CNN International has no distinct
@@ -442,6 +539,12 @@ These channels are whitelisted, but the PIN holder should know what else they ca
   visuals and nightlife flashbacks with alcohol visible; excluded.
 - **The Halal Ham** — a clip contains profanity; excluded.
 - **ImranSAVAGE** — prank/roast/vlog, not reliably halal; excluded.
+- **Round 7 halal-scope exclusions (mainstream general entertainment, not Islamic):**
+  comedy — Antik Mahmud, Sadman Sadik, The Ajaira LTD, Bangla Comedy Club, Mirakkel
+  Bangla, Naveed Mahbub, Abu Hena Rony, Shuvo Bangla Story, Hasir Baksho, Bangla Funny
+  Video BD; drama — Eagle Team, CMV Drama, CD Choice Drama, Dhruba TV, Bioscope
+  Entertainment, NTV Natok, RTV Drama, BanglaVision Drama, Maasranga Drama, Channel i TV,
+  Desh TV Drama, Prio Sylhet. All carry music, romance or general-entertainment content.
 
 ## Could not be verified — not whitelisted
 
@@ -497,3 +600,10 @@ tier would be needed to include them — that is a decision for the user.
   Mousum, Tamim&Salma 02, DOEL, koli media, Islamic Epoch, Freshy. Islamic Video
   Bangla (`UCyDuRfPrmB9gYF8Vmu20mnA`, id confirmed) is Islamic history
   documentaries, not comedy/drama — held for a future category.
+
+- **Round 7 (2026-11-25):** of Gemini's 320 proposed Bangladeshi channels, 185 handles
+  did not resolve to a real channel and are not listed anywhere here. Five wholesome
+  channels were flagged to the user instead of being included or excluded silently:
+  Sisimpur and Meena Cartoon Bangla (wholesome educational children's shows, not
+  Islamic), BanglaKidz, Alor Poth Cartoon and Bangla Moral Stories (wholesome/moral
+  kids' content, not specifically Islamic).
