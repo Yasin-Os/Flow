@@ -129,28 +129,38 @@ class FamilyWhitelistRepository
             val dropped = current.filter { it.channelId.isNotBlank() && it.channelId in REMOVED_SEED_IDS }
             // Round 5 categorized every seed entry, so stored entries written before that
             // carry a blank category and would never rank: refresh the category of each
-            // kept entry from its seed counterpart (matched by id, then handle). A channel
-            // the PIN holder added themselves has no seed counterpart and keeps its category.
+            // kept entry from its seed counterpart (matched by id, then handle). Round 6
+            // marks every seed entry Bangladeshi or foreign the same way, so refresh the
+            // marker too — a stored entry written before Round 6 carries no marker and
+            // would rank as foreign forever. A channel the PIN holder added themselves has
+            // no seed counterpart and keeps its category and marker.
             val seedById = FAMILY_SEED_CHANNELS.filter { it.channelId.isNotBlank() }.associateBy { it.channelId }
             val seedByHandle =
                 FAMILY_SEED_CHANNELS.filter { it.handle.isNotBlank() }.associateBy { it.handle.lowercase() }
-            val recategorized =
+            val refreshed =
                 pruned.map { existing ->
                     val seed =
                         seedById[existing.channelId]
                             ?: seedByHandle[existing.handle.lowercase()]
-                    if (seed != null && seed.category.isNotBlank() && seed.category != existing.category) {
-                        existing.copy(category = seed.category)
-                    } else {
+                    if (seed == null) {
                         existing
+                    } else {
+                        var updated = existing
+                        if (seed.category.isNotBlank() && seed.category != existing.category) {
+                            updated = updated.copy(category = seed.category)
+                        }
+                        if (seed.isBangladeshi != existing.isBangladeshi) {
+                            updated = updated.copy(isBangladeshi = seed.isBangladeshi)
+                        }
+                        updated
                     }
                 }
-            val categoriesChanged = recategorized.zip(pruned).any { (updated, old) -> updated.category != old.category }
-            if (missing.isEmpty() && dropped.isEmpty() && !categoriesChanged) {
+            val seedFieldsChanged = refreshed.zip(pruned).any { (updated, old) -> updated != old }
+            if (missing.isEmpty() && dropped.isEmpty() && !seedFieldsChanged) {
                 setSeedVersion(SEED_VERSION)
                 return
             }
-            save(recategorized + missing)
+            save(refreshed + missing)
             mirrorSubscriptions(missing)
             dropped.forEach { channel ->
                 runCatching { subscriptionRepository.unsubscribe(channel.channelId) }
@@ -246,8 +256,10 @@ class FamilyWhitelistRepository
              * skip the new channels on any install of that head. Round 4 bumped it to drop
              * Press TV (bogus id). Round 5 bumped it to refresh every stored entry's
              * `category` from the newly categorized seed, so the suggestions ranker can
-             * order existing installs too.
+             * order existing installs too. Round 6 bumped it to refresh every stored
+             * entry's `isBangladeshi` marker from the seed, so Bangladeshi-first ranking
+             * reaches existing installs too.
              */
-            const val SEED_VERSION = 5
+            const val SEED_VERSION = 6
         }
     }
