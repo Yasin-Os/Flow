@@ -11,13 +11,13 @@ import kotlinx.serialization.Serializable
  * the channels deliberately left out and why, is in `docs/family-whitelist.md`.
  *
  * [category] is one of the [FamilyChannelMatcher] `CATEGORY_*` values — waz, ghazal, tilawat,
- * cartoons, comedy, drama, news or ummah — and the suggestions ranker reads it to surface
+ * cartoons, comedy, drama, news, tour or ummah — and the suggestions ranker reads it to surface
  * waz, tilawat and ghazal first ([FamilySuggestionRanker]). A news channel is whitelisted
- * for news only: the entertainment-tier title filter still applies to its videos (see
- * [FamilyTextMatcher.blocks]), so a music/drama upload from a news channel is blocked even
- * though the channel itself is approved. The field defaults to "" so stored entries written
- * before it existed still decode; an uncategorized channel ranks as an ordinary approved
- * channel, never as news.
+ * for news only, and a tour channel for tour only: the entertainment-tier title filter still
+ * applies to their videos (see [FamilyTextMatcher.blocks]), so a music/drama upload from a
+ * news or tour channel is blocked even though the channel itself is approved. The field
+ * defaults to "" so stored entries written before it existed still decode; an uncategorized
+ * channel ranks as an ordinary approved channel, never as news.
  *
  * [isBangladeshi] marks a channel as Bangladeshi; the ranker surfaces Bangladeshi videos
  * before foreign ones inside each category tier ([FamilySuggestionRanker]). It defaults to
@@ -49,6 +49,10 @@ class FamilyChannelMatcher(
     val newsChannelIds: Set<String> = emptySet(),
     /** Normalized handles of whitelisted news channels. */
     val newsHandles: Set<String> = emptySet(),
+    /** The resolved `UC…` ids of whitelisted tour channels. */
+    val tourChannelIds: Set<String> = emptySet(),
+    /** Normalized handles of whitelisted tour channels. */
+    val tourHandles: Set<String> = emptySet(),
     /** The [FamilyChannel.category] of each resolved `UC…` id, for suggestion ranking. */
     val categoryByChannelId: Map<String, String> = emptyMap(),
     /** The [FamilyChannel.category] of each normalized handle, for id-less entries. */
@@ -79,6 +83,16 @@ class FamilyChannelMatcher(
         if (channelId.isNotBlank() && channelId in newsChannelIds) return true
         val normalized = handle?.let(AiHandle::normalize)
         return normalized != null && normalized in newsHandles
+    }
+
+    /** True when the channel is a whitelisted tour channel (entertainment filter still applies). */
+    fun isTourChannel(
+        channelId: String,
+        handle: String?,
+    ): Boolean {
+        if (channelId.isNotBlank() && channelId in tourChannelIds) return true
+        val normalized = handle?.let(AiHandle::normalize)
+        return normalized != null && normalized in tourHandles
     }
 
     /** The [FamilyChannel.category] of this channel, or "" when it is not categorized. */
@@ -128,6 +142,9 @@ class FamilyChannelMatcher(
         /** The [FamilyChannel.category] value for a news channel. */
         const val CATEGORY_NEWS = "news"
 
+        /** The [FamilyChannel.category] value for a tour / travel channel. */
+        const val CATEGORY_TOUR = "tour"
+
         /** The [FamilyChannel.category] value for the Ummah Network channel. */
         const val CATEGORY_UMMAH = "ummah"
 
@@ -149,6 +166,16 @@ class FamilyChannelMatcher(
                 newsHandles =
                     channels
                         .filter { it.category == CATEGORY_NEWS }
+                        .mapNotNull { AiHandle.normalize(it.handle) }
+                        .toSet(),
+                tourChannelIds =
+                    channels
+                        .filter { it.category == CATEGORY_TOUR }
+                        .mapNotNull { it.channelId.takeIf(String::isNotBlank) }
+                        .toSet(),
+                tourHandles =
+                    channels
+                        .filter { it.category == CATEGORY_TOUR }
                         .mapNotNull { AiHandle.normalize(it.handle) }
                         .toSet(),
                 categoryByChannelId =
