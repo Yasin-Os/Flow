@@ -7,13 +7,19 @@ package io.github.aedev.flow.data.contentfilter.family
  * confirmed for the channel — the id is the match key, and the handle is only a fallback
  * ([FamilyChannelMatcher] ignores blank handles).
  *
- * Counts: waz 65 (48 + 17 media), Ummah Network 1, ghazal 44, tilawat 22, cartoons 8,
- * comedy 5, drama 2, news 96 — 243 channels. Every entry carries its `category`, which the
- * suggestions ranker reads ([FamilySuggestionRanker]): waz, ghazal and tilawat rank first.
- * 90 of the 243 are Bangladeshi (`isBangladeshi = true`: waz 25, ghazal 15, tilawat 3,
- * cartoons 3, news 43, ummah 1); the ranker surfaces Bangladeshi videos before foreign
- * ones inside each category tier. The other 153 carry no marker and rank as foreign by
- * default, including 7 genuinely uncertain ones deliberately left unboosted.
+ * Counts: waz 79 (speakers + media — see the section comments below), Ummah Network 1,
+ * ghazal 63, tilawat 24, cartoons 9, comedy 2, drama 2, news 96, tour 28 — 304
+ * channels. Every entry carries its `category`, which the suggestions ranker reads
+ * ([FamilySuggestionRanker]): waz, ghazal and tilawat rank first. 204 of the 304 are
+ * Bangladeshi (`isBangladeshi = true`: waz 56, ghazal 48, tilawat 5, cartoons 6,
+ * comedy 0, drama 1, news 59, tour 28, ummah 1); the ranker surfaces Bangladeshi
+ * videos before foreign ones inside each category tier. The other 100 carry no marker
+ * and rank as foreign by default. Round 7 rebuilt the seed to 304 channels (100
+ * foreign, 204 Bangladeshi): 49 foreign channels pruned, 110 Bangladeshi channels
+ * added (waz 31, ghazal 30, tilawat 2, cartoons 3, news 16, tour 28). The 500 target
+ * was not reached: only 110 of Gemini's 320 proposed channels verified as real,
+ * fitting Bangladeshi channels (185 handles did not resolve, 23 failed the halal-scope
+ * check); no unfitting channel was added to pad the count.
  * News entries carry `category = "news"`: they are whitelisted for news, but the
  * entertainment-tier title filter still applies to their videos. Ummah Network was added at
  * the user's explicit instruction (see the doc).
@@ -110,12 +116,6 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
         FamilyChannel(channelId = "UC3YmP7nqf514I1zh1eVbzrA", handle = "@drzakirchannel", name = "Dr Zakir Naik", category = "waz"),
         FamilyChannel(channelId = "UCC3pnIpWMVail5J8mvYEiZA", handle = "@muftitariqmasood", name = "Mufti Tariq Masood", category = "waz"),
         FamilyChannel(
-            channelId = "UCumT1HMTXegYzESyPKH3pVg",
-            handle = "@muftitariqmasoodspeeches",
-            name = "Mufti Tariq Masood Speeches",
-            category = "waz",
-        ),
-        FamilyChannel(
             channelId = "UCxBsm13Dkj4oIeCiVGxUtPw",
             handle = "@anisurrahmanashrafiofficial",
             name = "Anisur Rahman Ashrafi",
@@ -130,31 +130,14 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "waz",
         ),
         FamilyChannel(channelId = "UCWsdcrre0WbCWML_PnuzoAg", handle = "@assimalhakeem", name = "Assim Al-Hakeem", category = "waz"),
-        FamilyChannel(channelId = "UCYfp61fUZLuAZyO4MgrJZ_Q", handle = "@DarulIftaaUK", name = "DarulIftaaUK", category = "waz"),
         FamilyChannel(channelId = "UC88lF82aS_VW3oJe7GV5zsA", handle = "@zaytunacollege", name = "Zaytuna College", category = "waz"),
-        FamilyChannel(channelId = "UC__HMOrvqZ6NwPuDG_2Fmow", handle = "@ZamZamAcademy", name = "ZamZam Academy", category = "waz"),
-        FamilyChannel(
-            channelId = "UCnAsQQqfuBi1NJ8r4wcpr3A",
-            handle = "@askmuftitariqmasood",
-            name = "Ask Mufti Tariq Masood",
-            category = "waz",
-        ),
-        FamilyChannel(
-            channelId = "UC-Vsetv02QQ8ALtwoZTwdDQ",
-            handle = "@muftitariqmasoodspecial",
-            name = "Mufti Tariq Masood Special",
-            category = "waz",
-        ),
         FamilyChannel(channelId = "UCQHRLH8RQIrdGWMhf5heWiA", handle = "@onepathnetwork", name = "OnePath Network", category = "waz"),
-        FamilyChannel(channelId = "UCyxM7MgZkDe5stZpb6CiOcA", handle = "@khalifahklothing", name = "Digital Mimbar", category = "waz"),
-        FamilyChannel(channelId = "UCx1Zr8zUKUHUtHEVq09b5vg", handle = "@jannahinstitute", name = "Jannah Institute", category = "waz"),
         FamilyChannel(
             channelId = "UCNdUFOtzSx3FS71pHkQLxhQ",
             handle = "@freequraneducation",
             name = "FreeQuranEducation",
             category = "waz",
         ),
-        FamilyChannel(channelId = "UCGzdb458mefm-8w-kV_qv6g", handle = "@saadtasleem", name = "Saad Tasleem", category = "waz"),
         FamilyChannel(channelId = "UCHGAqdQBKTVON_FUCIYCh3Q", handle = "@themercifulservant", name = "MercifulServant", category = "waz"),
         FamilyChannel(
             channelId = "UC1B7kOnMRdPuP0rxW6mS7_A",
@@ -162,27 +145,8 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             name = "AlMaghrib Institute",
             category = "waz",
         ),
-        FamilyChannel(
-            channelId = "UCvJyEIx_it2jFYP5M1OzGng",
-            handle = "@onemessagefoundation",
-            name = "One Message Foundation",
-            category = "waz",
-        ),
-        FamilyChannel(channelId = "UC2cX3SmsdWsrRS8t_5zvzEw", handle = "@safinasociety", name = "Safina Society", category = "waz"),
-        FamilyChannel(channelId = "UClx9GdAkydj7Lgu9DbFmY6w", handle = "@sabeelislam", name = "Sabeel Ahmed", category = "waz"),
-        FamilyChannel(channelId = "UCeZBhrU8xHcik0ZgtDwjsdA", handle = "@sapienceinstitute", name = "Sapience Institute", category = "waz"),
-        FamilyChannel(
-            channelId = "UCTX8ZbNDi_HBoyjTWRw9fAg",
-            handle = "@oneislamproductions",
-            name = "One Islam Productions",
-            category = "waz",
-        ),
         FamilyChannel(channelId = "UCIVSdtXb4pR57BDqKKNqsTg", handle = "@hudatvchannel", name = "Huda TV", category = "waz"),
         FamilyChannel(channelId = "UCz4AXmFeSbi-0vPXI102Q5w", handle = "@muslimcentral", name = "Muslim Central", category = "waz"),
-        FamilyChannel(channelId = "UCtsN0omQRQ3_XgnLNioqxPQ", handle = "@majedmahmoud", name = "Majed Mahmoud", category = "waz"),
-        FamilyChannel(channelId = "UCXHz5brnR9qwqvQvF3VJdgQ", handle = "@thedeenshowtv", name = "TheDeenShowTV", category = "waz"),
-        FamilyChannel(channelId = "UCVp5Ze24V2iFiUY1y0WtRaA", handle = "@qalaminstitute", name = "Qalam Institute", category = "waz"),
-        FamilyChannel(channelId = "UCYr_FKFkc_pJq_sMKuaktnw", handle = "@miftaahinstitute", name = "Miftaah Institute", category = "waz"),
         FamilyChannel(channelId = "UCeCAQhKbU2ETNWxWxB94HgA", handle = "@themuslimlantern", name = "The Muslim Lantern", category = "waz"),
         FamilyChannel(
             channelId = "UCFnsCaT_2VKBg_SoGjhO1nA",
@@ -191,7 +155,126 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "waz",
         ),
         FamilyChannel(channelId = "UC34dxKHa9n9ggxz4m7bztfA", handle = "@belal.assaad", name = "Belal Assaad", category = "waz"),
-        // Waz — media channels — 17 (speakers with no personal official channel; see the doc)
+        FamilyChannel(
+            channelId = "UC8bmdsHjNcGQWfNw5XosWXw",
+            handle = "@DrImamHossain",
+            name = "Dr. Imam Hossain",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCEtfX5Ojp2snK5AG2mj0Y3A",
+            handle = "@HafizurRahmanSiddiki",
+            name = "Hafizur Rahman Siddiki",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCdyN9diytljkZ-PCDpwy8zg",
+            handle = "@AbdullahAlAminOfficial",
+            name = "Maulana Abdullah Al Amin",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCGOGMpwxF_GwD8eqoDjANQQ",
+            handle = "@EnayetullahAbbasi",
+            name = "Maulana Enayetullah Abbasi",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCPwN-jfA_EUZELi0Z4RZYwg",
+            handle = "@GolamRabbaniJuktibadi",
+            name = "Maulana Golam Rabbani Juktibadi",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCKZN8S7P-scqYRxk7rkKk4A",
+            handle = "@HabiburRahmanJuktibadi",
+            name = "Maulana Habibur Rahman Juktibadi",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCm7_KTkbtkm0E5edK0w8veQ",
+            handle = "@JubayerAhmadAnsari",
+            name = "Maulana Jubayer Ahmad Ansari",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC76l0Vhq_JARusa5n3US_Iw",
+            handle = "@JunayedAlHabib",
+            name = "Maulana Junayed Al Habib",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCs3Nnyrt7EoAhSUtfLWtuog",
+            handle = "@MaulanaLutforRahman",
+            name = "Maulana Lutfor Rahman",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCf4q5fmsXV90UzKur2JsIcw",
+            handle = "@MaulanaMonirulIslam",
+            name = "Maulana Monirul Islam",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC8F6enSK-2SsZJ11HhTDbCw",
+            handle = "@NasirUddinJuktibadi",
+            name = "Maulana Nasir Uddin Juktibadi",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCYWEw1PqTKdMxArOoKbE8fw",
+            handle = "@TarekMonowar",
+            name = "Maulana Tarek Monowar",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCSktIz9t3z3Twx5lcjGaG_A",
+            handle = "@MuftiKaziIbrahim",
+            name = "Mufti Kazi Ibrahim",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCB_RSLhbVX_guW3ECAL8KGg",
+            handle = "@MuftiTariqulIslam",
+            name = "Mufti Tariqul Islam",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC1yRTbHdVBo6mDs5WNdfYrw",
+            handle = "@AbdurRazzakBinYousuf",
+            name = "Shaykh Abdur Razzak Bin Yousuf",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCKy829QeyVFhYOG4ZZVNUnw",
+            handle = "@AmanullahMadani",
+            name = "Shaykh Amanullah Bin Ismail Madani",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCntbI4E9OT3K90JJ-AOYp9A",
+            handle = "@MotiurRahmanMadani",
+            name = "Shaykh Motiur Rahman Madani",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        // Waz — media channels — 31 (speakers with no personal official channel; see the doc)
         FamilyChannel(
             channelId = "UCzqsR4mncbpd5MOmrwGvETg",
             handle = "@mamunulhaque",
@@ -299,6 +382,104 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "waz",
             isBangladeshi = true,
         ),
+        FamilyChannel(
+            channelId = "UCOrxjKSVYQVYxTT_BOyn4Tg",
+            handle = "@AlorPoroshBD",
+            name = "Alor Porosh",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCBUueX0wDWnC0qr1zbXq0PA",
+            handle = "@AsSunnahFoundation",
+            name = "As-Sunnah Foundation",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCUnuyrDUwl0Ef9YmpIX4QWA",
+            handle = "@BanglaIslamicLecture",
+            name = "Bangla Islamic Lecture",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCC8O9Tz9_WaiDCFXaGaQm-A",
+            handle = "@BanglaWazTV",
+            name = "Bangla Waz TV",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCLkXpkmKHzxIzfaAIaYbesg",
+            handle = "@BaseeraMedia",
+            name = "Baseera",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCpmcH61LVWL96ThTs047oJg",
+            handle = "@DawatulIslamBD",
+            name = "Dawatul Islam BD",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCYtZ36QE-bqQzx0MVyj463Q",
+            handle = "@ImaniJikir",
+            name = "Imani Jikir",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCzbXMEWTbH8Rphi2nNkNqQg",
+            handle = "@IslamiZindegi",
+            name = "Islami Zindegi",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCv0k4AqKz9S95YP9cR5uhBA",
+            handle = "@MarkazudDawah",
+            name = "Markazud Dawah Al Islamia",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCcxQ-G65x2_m5eCm5HwdGPg",
+            handle = "@NKBD",
+            name = "NKBD Islamic",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCWovh_R7ca13BmXMLib-g2A",
+            handle = "@PeaceTVBangla",
+            name = "Peace TV Bangla Official",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCSzp1NxiuSyvlVXT5OaGUow",
+            handle = "@TaqwaGroup",
+            name = "Taqwa Group",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC5hXlNhwO_wihUsDEkg7tzw",
+            handle = "@TawheedMediaBD",
+            name = "Tawheed Media BD",
+            category = "waz",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC8FnuNIy2eknee9Msxtd6dA",
+            handle = "@WayToJannahBD",
+            name = "Way To Jannah",
+            category = "waz",
+            isBangladeshi = true,
+        ),
         // Ummah Network — 1 (added at the user's explicit instruction; see the doc)
         FamilyChannel(
             channelId = "UCdC58Fno7uiux5-fDWb3F4Q",
@@ -307,7 +488,7 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "ummah",
             isBangladeshi = true,
         ),
-        // Ghazal / nasheed — 44
+        // Ghazal / nasheed — 63
         FamilyChannel(
             channelId = "UCUNkaUjhRArzU4Tm_TPSDlg",
             handle = "@holytunebdofficial",
@@ -323,15 +504,8 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             isBangladeshi = true,
         ),
         FamilyChannel(channelId = "UC4d8OKjmN_ggVVbo00DM_3Q", handle = "@OmarEsa", name = "Omar Esa", category = "ghazal"),
-        FamilyChannel(channelId = "UC9Jrzve0dhPoo_LexakSFMw", handle = "@sieddofficial", name = "Siedd", category = "ghazal"),
-        FamilyChannel(channelId = "UCpigf8GfwA6lU8f9VRbCv8g", handle = "@ilyasmao", name = "Ilyas Mao", category = "ghazal"),
-        FamilyChannel(channelId = "UC8-_GbgsWcUmZCpWGsC3QvA", handle = "@firasvocals", name = "Firas", category = "ghazal"),
-        FamilyChannel(channelId = "UCOP4D0JslF9wFvc7x4rqh3A", handle = "@SafeAdam", name = "Safe Adam", category = "ghazal"),
-        FamilyChannel(channelId = "UC7oYY3yXJKw7ZU7ORlNOF2A", handle = "@labbayk", name = "Labbayk (UK)", category = "ghazal"),
-        FamilyChannel(channelId = "UCJZS2p3jZ_T8TiUMVE6bvVQ", handle = "@muadmusic", name = "Muad", category = "ghazal"),
         FamilyChannel(channelId = "UC-2pqFUafqKCnACEfQasZGg", handle = "@ahmedbukhatir", name = "Ahmed Bukhatir", category = "ghazal"),
         FamilyChannel(channelId = "UCoGJqzgYwpWoc_unl6UJNIg", handle = "@baraamasoudofficial", name = "Baraa Masoud", category = "ghazal"),
-        FamilyChannel(channelId = "UCTC4dW158I7bmI-N-Oh2jEA", handle = "@MikhaaelMala", name = "Mikhaael Mala", category = "ghazal"),
         FamilyChannel(
             channelId = "UC0OQYbUkGVfH1Idvvzq73xg",
             handle = "@ehsaantahmid",
@@ -339,26 +513,17 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "ghazal",
             isBangladeshi = true,
         ),
-        FamilyChannel(channelId = "UCsDrzNjBfjkyiicDskWp_mg", handle = "@sintesaofficial", name = "Sintesa", category = "ghazal"),
         FamilyChannel(channelId = "UCMBXjVFU51CJ047U1Wp3JKQ", handle = "@maherzain", name = "Maher Zain", category = "ghazal"),
         FamilyChannel(channelId = "UCTV8sHvXq5VUiTGfZv9JWjg", handle = "@zainbhikhaofficial", name = "Zain Bhikha", category = "ghazal"),
         FamilyChannel(channelId = "UCMBNjDVgy1lc_FyePVg60_Q", handle = "@samiyusuf", name = "Sami Yusuf", category = "ghazal"),
         FamilyChannel(channelId = "UCkZCizaUsLNC-T_osXPiElw", handle = "@harrisjofficial", name = "Harris J Official", category = "ghazal"),
         FamilyChannel(channelId = "UCB9Iev_eM4rQBlaaVr0qVxw", handle = "@humoodalkhudher", name = "Humood AlKhudher", category = "ghazal"),
         FamilyChannel(channelId = "UCumITGFd8ACCnmbNp9G3GlA", handle = "@miladrazaqadri", name = "Milad Raza Qadri", category = "ghazal"),
-        FamilyChannel(
-            channelId = "UCIqEQQFrIuK4uLIa3VCNeug",
-            handle = "@castillonasheedsofficial",
-            name = "Castillo Nasheeds",
-            category = "ghazal",
-        ),
         FamilyChannel(channelId = "UCU0ngFlg5tmFfLYs_dAdMaQ", handle = "@nativedeen", name = "Native Deen", category = "ghazal"),
         FamilyChannel(channelId = "UCzVyRGnKoxIXPxnx31ZfiOQ", handle = "@officialmesutkurtis", name = "Mesut Kurtis", category = "ghazal"),
         FamilyChannel(channelId = "UCa706fvxuVPvs-4ZgI95_MQ", handle = "@raefmusic", name = "Raef", category = "ghazal"),
         FamilyChannel(channelId = "UCyvdo5fpPSnidSsM-c7F9wg", handle = "", name = "Owais Raza Qadri", category = "ghazal"),
         FamilyChannel(channelId = "UCNA2F7_fAFF3ypRqybx25bg", handle = "", name = "Junaid Jamshed", category = "ghazal"),
-        FamilyChannel(channelId = "UC0Fq9qaJ50wxu8XLmN-i-NQ", handle = "@unic2002", name = "UNIC", category = "ghazal"),
-        FamilyChannel(channelId = "UCOrEH-SzmP_Nmipsk0yfzMg", handle = "@inteamdigital", name = "Inteam Digital", category = "ghazal"),
         FamilyChannel(
             channelId = "UCdAan1vkVv8kBP53CNtQFTQ",
             handle = "@iqrashilpigosthi",
@@ -401,7 +566,13 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "ghazal",
             isBangladeshi = true,
         ),
-        FamilyChannel(channelId = "UCB2v_yFJyk0b5xeJ-Y7sz5w", handle = "@jannattvbd", name = "Jannat TV", category = "ghazal"),
+        FamilyChannel(
+            channelId = "UCB2v_yFJyk0b5xeJ-Y7sz5w",
+            handle = "@jannattvbd",
+            name = "Jannat TV",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
         FamilyChannel(
             channelId = "UCpt14g-5tVBZnC-Lqhf7tIg",
             handle = "@rajiyarisha",
@@ -424,8 +595,20 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "ghazal",
             isBangladeshi = true,
         ),
-        FamilyChannel(channelId = "UCa76Ff6mM0diVuBBzMyE3AQ", handle = "@madihaofficial", name = "Wafaa Madiha", category = "ghazal"),
-        FamilyChannel(channelId = "UCzVHaUNH10ZjAbOVAlR-UnQ", handle = "@melodiansglobal", name = "MELODIANS", category = "ghazal"),
+        FamilyChannel(
+            channelId = "UCa76Ff6mM0diVuBBzMyE3AQ",
+            handle = "@madihaofficial",
+            name = "Wafaa Madiha",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCzVHaUNH10ZjAbOVAlR-UnQ",
+            handle = "@melodiansglobal",
+            name = "MELODIANS",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
         FamilyChannel(
             channelId = "UCqXSt1wn-B4yiRqP6LP7DnQ",
             handle = "@rupalikonthoofficial",
@@ -447,7 +630,217 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "ghazal",
             isBangladeshi = true,
         ),
-        // Tilawat — 22
+        FamilyChannel(
+            channelId = "UCuZ1w3dmhV2eD5hWnU8UYaw",
+            handle = "@AbdulMuinOfficial",
+            name = "Abdul Muin",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UChZmNC_p0Z_ToCDBMdkAD7Q",
+            handle = "@AHAlamgirMedia",
+            name = "AH ALAMGIR MEDIA",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC71ip_oj2fHC5KHxrHky3Rw",
+            handle = "@AhmadAbdullahOfficial",
+            name = "Ahmad Abdullah",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCHB63EwZAcXGA7uaHlfahnw",
+            handle = "@AlNurMahfil",
+            name = "Al Nur Mahfil",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC1jWiwBjY43rXWcW2XH5QmQ",
+            handle = "@AlHeraShilpigosthi",
+            name = "Al-Hera Shilpigosthi",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCoqdyF7EqvRS0kxYucMHiMg",
+            handle = "@AlMadinaTune",
+            name = "Al-Madina Tune",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCRiPtI4PF50ZwUO3pO1XEHQ",
+            handle = "@DishariShilpigosthi",
+            name = "Dishari Shilpigosthi",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCIeMnFaiEe7yZcEWp1uO1xQ",
+            handle = "@HolyLightBD",
+            name = "Holy Light",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCGrYQSPE4a1eqrmKZBxjvSA",
+            handle = "@HusainAdnan",
+            name = "Husain Adnan",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCBCe8DRXNqPcW80DKHP0MTQ",
+            handle = "@ImanTune",
+            name = "Iman Tune",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCBSAN1ie3xrZ4HihralQ5Iw",
+            handle = "@ImtiazMasrur",
+            name = "Imtiaz Masrur",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC8w3Ghds4Y44Gn8DMTHxypQ",
+            handle = "@JannatContents",
+            name = "Jannat Contents",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCpzl2Gibj-h17M5jIAvr9WA",
+            handle = "@JannatiSur",
+            name = "Jannati Sur",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCU2OWmIElo3iXBtt6xkAeZQ",
+            handle = "@KalarabShilpigosthi",
+            name = "Kalarab Shilpigosthi",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCarRaVvB6v4Vtvb3Yd2v_Dg",
+            handle = "@KhatuneJannatTv",
+            name = "Khatune Jannat Tv",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCLMxoW8SigspctaZ0_aVibg",
+            handle = "@MuhammadBadruzzaman",
+            name = "Muhammad Badruzzaman",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCJtffV27Lt8jkTnwae4t0Iw",
+            handle = "@MunaemBillahOfficial",
+            name = "Munaem Billah Official",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCI9ZGVISdiJjGpGRP9_Nd3g",
+            handle = "@NasheedBangladesh",
+            name = "Nasheed Bangladesh",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCD8iu6DCtpoQavX9aTLtpdw",
+            handle = "@NasheedForum",
+            name = "Nasheed Forum",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCQ-dHa73_OJrwfPUNkNBIDw",
+            handle = "@NoorTuneBD",
+            name = "Noor Tune",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCNePUxuLwlEEJ5QLOK5AJ_Q",
+            handle = "@PEACENasheedStudio",
+            name = "PEACE Nasheed Studio",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCwWDgcaX02RwI6iH1SKdj1g",
+            handle = "@QalbNasheed",
+            name = "Qalb Nasheed",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCdkZEvJ4IMDLMkBv5VVgGwQ",
+            handle = "@RahmatTune",
+            name = "Rahmat Tune",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCkbRot9IE6Y202qg8Wl9OqQ",
+            handle = "@SaimumShilpigosthi",
+            name = "Saimum Shilpigosthi",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCkiML_Lqs-9XJTb2vUjxiGQ",
+            handle = "@SurerTori",
+            name = "Surer Tori",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCEPQ4hYMLNMA8wqQTcXI8rA",
+            handle = "@TaqwaTune",
+            name = "Taqwa Tune",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCXxLz1w58lhIMb1zN58dJDA",
+            handle = "@TitasShilpigosthi",
+            name = "Titas Shilpigosthi",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCWrZcUUzjjvTGhoUSPGkLmQ",
+            handle = "@TuneOfIslamBD",
+            name = "Tune of Islam",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCxOqiRd6p8f1NXxAE28gp4Q",
+            handle = "@YeasinHayder",
+            name = "Yeasin Hayder",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCYJzmptqs19aHlnfqHGwNBA",
+            handle = "@ZikrianRecords",
+            name = "Zikrian Records",
+            category = "ghazal",
+            isBangladeshi = true,
+        ),
+        // Tilawat — 24
         FamilyChannel(channelId = "UCmMcOjsVehVlEOteyrhjI2Q", handle = "@alafasy", name = "Alafasy", category = "tilawat"),
         FamilyChannel(channelId = "UCzU3jMTL1mFb3Ql9g-pRn9A", handle = "@islam_sobhi", name = "Islam Sobhi", category = "tilawat"),
         FamilyChannel(
@@ -523,7 +916,21 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             category = "tilawat",
             isBangladeshi = true,
         ),
-        // Islamic cartoons — 8
+        FamilyChannel(
+            channelId = "UCWnSIJFnJCuKNoY8Q6XUvUA",
+            handle = "@BanglaQuranRecitation",
+            name = "Bangla Quran Recitation",
+            category = "tilawat",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCEsu0nN6KrcvM00aDGkGx0w",
+            handle = "@qariyusufqurantv",
+            name = "Qari Ahmad Bin Yusuf Al-Azhari",
+            category = "tilawat",
+            isBangladeshi = true,
+        ),
+        // Islamic cartoons — 9
         FamilyChannel(
             channelId = "UC178EmfQAV3OT-UpuO6WUMg",
             handle = "@omarhanaislamicsongsforkids",
@@ -558,28 +965,237 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
             isBangladeshi = true,
         ),
         FamilyChannel(channelId = "UC6bOkPFbfnDNa5v3Kz8Xcbw", handle = "@NoorKids", name = "Noor Kids", category = "cartoons"),
-        FamilyChannel(channelId = "UC4lFkKHO5QEktDNBMhBQ25A", handle = "@LittleMuslim", name = "LittleMuslim", category = "cartoons"),
         FamilyChannel(
-            channelId = "UCtlcIZVBdFPSAtCoNZsTusg",
-            handle = "@learnwithzakaria",
-            name = "Learn with Zakaria",
+            channelId = "UC7kuDI4KqxevSKiQGpOLs1w",
+            handle = "@PanvisionTV",
+            name = "Panvision TV",
             category = "cartoons",
+            isBangladeshi = true,
         ),
-        // Halal comedy — 5
+        FamilyChannel(
+            channelId = "UChBxjdHmHE_xFRwCn5oJPkQ",
+            handle = "@mahirislamicnetwork",
+            name = "Mahir Islamic Network",
+            category = "cartoons",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCYaB6IGCrXxfjCamI_57b2g",
+            handle = "@priocartoontube",
+            name = "Prio Cartoon Tube",
+            category = "cartoons",
+            isBangladeshi = true,
+        ),
+        // Halal comedy — 2
         FamilyChannel(channelId = "UCeccrNGLzk6d0M_vaomD3LQ", handle = "@smiletojannah", name = "Smile 2 Jannah", category = "comedy"),
         FamilyChannel(channelId = "UCs5GRyu3Sz1KVnBEWB43s7g", handle = "@dawoodsavager", name = "DawoodSAVAGE", category = "comedy"),
-        FamilyChannel(channelId = "UCXtmVI108qG8GyWBswI7H7A", handle = "", name = "Zuhaib Syed", category = "comedy"),
-        FamilyChannel(channelId = "UC6uOx4sVqGNGrmJBUOh0zBg", handle = "@deccanidiaries", name = "Deccani Diaries", category = "comedy"),
-        FamilyChannel(channelId = "UCoIRbHvNK8qmjCMdQMbpQCg", handle = "", name = "Smile2jannah Urdu & Hindi", category = "comedy"),
         // Halal drama / natok — 2
         FamilyChannel(
             channelId = "UCd5A8poxhdxProarD8AU-bw",
             handle = "@eagleislamicnatok",
             name = "Eagle Islamic Natok",
             category = "drama",
+            isBangladeshi = true,
         ),
         FamilyChannel(channelId = "UC816Kbi-g_VtbJH0xRTPN2A", handle = "", name = "The path of islam", category = "drama"),
-        // News — 96 (Bangladeshi 43, international / Islamic 53). category = "news": the
+        // Tour blogs — 28
+        FamilyChannel(
+            channelId = "UCLZLfy4DVTfpBpylslR_OPQ",
+            handle = "@NadirOnTheGoBangla",
+            name = "Nadir On The Go - Bangla",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCqlthGjbLIci7i3x2gk8P4Q",
+            handle = "@NadirOnTheGo",
+            name = "Nadir On The Go",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCFX0lAkJUQwRP19Oi4BN6bA",
+            handle = "@SalahuddinSumon",
+            name = "Salahuddin Sumon",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCPOjt2u1E3F26Fjcdwlc6iA",
+            handle = "@MdFizz",
+            name = "Md Fizz",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCWJMtvKZjKYCfwMUpAmuP5A",
+            handle = "@RakibHossainvlogs",
+            name = "Rakib Hossain",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCcKuu96Qzgn7bi1LTxkKvZg",
+            handle = "@RSFahimChowdhury",
+            name = "RS Fahim Chowdhury",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCgc5_M1RttS2zaJlswB0F3w",
+            handle = "@PetukCouple",
+            name = "Petuk Couple",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCxbyDapSavjgvdtpcJ2BJKw",
+            handle = "@RafsanTheChotoBhai",
+            name = "Rafsan TheChotoBhai",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCcmHGntaKUcTovfr4hMZnPw",
+            handle = "@FoodAppi",
+            name = "Food Appi",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCql6nzU1vRapqcL1OVj7pbQ",
+            handle = "@MrMixersWorld",
+            name = "Mr Mixer's World",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCdGRNVOJdAOVjp4TapiW0Bw",
+            handle = "@TravelerOfBangladesh",
+            name = "Traveler Of Bangladesh",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCt_vDfK7BEU1bNOJ3UB_FkA",
+            handle = "@ArafIntisarDipto",
+            name = "Araf Intisar Dipto",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC8tQfbrNXq4CJn3onK6Fbgw",
+            handle = "@TashRuva",
+            name = "Tash Ruva",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCYLQk4itlqhydYfOsQn1kqQ",
+            handle = "@SaifulRubel",
+            name = "Saiful Rubel",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCtv8L_0HMtJdpnpDVYxS1EA",
+            handle = "@TravelWithTuhin",
+            name = "Travel With Tuhin",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCbIq1NJhNhjyLCO4EKNgHuQ",
+            handle = "@TravelWithSajib",
+            name = "Travel With Sajib",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCurOe93SgDH3Pi8K2QLv1bg",
+            handle = "@TravelWithFahim",
+            name = "Travel With Fahim",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCtXG3Ab3TbBGPQ_SZJDN79w",
+            handle = "@ExploreBangladesh",
+            name = "Explore Bangladesh",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UComnqIXlVbeO5n60GdkNqFQ",
+            handle = "@BeautifulBangladesh",
+            name = "Beautiful Bangladesh",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UClqmxmjT-Aipy4NzBx8kgqg",
+            handle = "@BanglaTravelVlog",
+            name = "Bangla Travel Vlog",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCadnpW_PjoqUfQ9oDFpvWoQ",
+            handle = "@SoloTravelerBD",
+            name = "Solo Traveler BD",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCF1SE7jMuqVJijXmpaD601A",
+            handle = "@MotoVloggerBD",
+            name = "Moto Vlogger BD",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCADXcCu5TG-BwftN6VjHhUw",
+            handle = "@BikeRideBD",
+            name = "Bike Ride BD",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCs7zFYEr5MxjW0L0zHR7xCA",
+            handle = "@BandarbanTourGuide",
+            name = "Bandarban Tour Guide",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCc9_Nz1wUkmaHGHulcHoOrQ",
+            handle = "@GramBanglarChobi",
+            name = "Gram Banglar Chobi",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC0LWcuSlD4JidzXkzX_P45A",
+            handle = "@DeshVromon",
+            name = "Desh Vromon",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCBdevN8BnXEJorRYVia5zIQ",
+            handle = "@VromonGuide",
+            name = "Vromon Guide",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCV_z455vBbu-VB1Dig_h-Vw",
+            handle = "@BanglaBackpacker",
+            name = "Bangla Backpacker",
+            category = "tour",
+            isBangladeshi = true,
+        ),
+        // News — 96 (Bangladeshi 59, international / Islamic 37). category = "news": the
         // entertainment-tier title filter still applies to these channels' videos.
         FamilyChannel(
             channelId = "UCN6sm8iHiPd0cnoUardDAnw",
@@ -884,57 +1500,153 @@ val FAMILY_SEED_CHANNELS: List<FamilyChannel> =
         ),
         FamilyChannel(channelId = "UCNye-wNBqNL5ZzHSJj3l8Bg", handle = "@aljazeeraenglish", name = "Al Jazeera English", category = "news"),
         FamilyChannel(channelId = "UCfiwzLy-8yKzIbsmZTzxDgw", handle = "@aljazeera", name = "Al Jazeera Arabic", category = "news"),
-        FamilyChannel(channelId = "UCCv1Pd24oPErw5S7zJWltnQ", handle = "@aljazeeramubasher", name = "AJ Mubasher", category = "news"),
-        FamilyChannel(channelId = "UC_yXEx3-Gk5drg9qhPzSQSg", handle = "@ajbalkans", name = "Al Jazeera Balkans", category = "news"),
         FamilyChannel(channelId = "UC16niRr50-MSBwiO3YDb3RA", handle = "@bbcnews", name = "BBC News", category = "news"),
         FamilyChannel(channelId = "UCelk6aHijZq-GJBBB9YpReA", handle = "@bbcnewsarabic", name = "BBC News Arabic", category = "news"),
-        FamilyChannel(channelId = "UCvm8V4Dwtz0fbPGbpk7RYAg", handle = "@bbcurdu", name = "BBC News Urdu", category = "news"),
         FamilyChannel(channelId = "UCupvZG-5ko_eiXAupbDfxWw", handle = "@cnn", name = "CNN", category = "news"),
         FamilyChannel(channelId = "UCoMdktPbSTixAyNGwb-UYkQ", handle = "@skynews", name = "Sky News", category = "news"),
         FamilyChannel(channelId = "UCIJXOvggjKtCagMfxvcCzAA", handle = "@skynewsarabia", name = "Sky News Arabia", category = "news"),
         FamilyChannel(channelId = "UC7fWeaHhqgM4Ry-RMpM2YYw", handle = "@trtworld", name = "TRT World", category = "news"),
-        FamilyChannel(channelId = "UC5GvVahlgulCyo4cshSmbcg", handle = "@trtarabi", name = "TRT Arabi", category = "news"),
         FamilyChannel(channelId = "UCCCPCZNChQdGa9EkATeye4g", handle = "@france24", name = "FRANCE 24", category = "news"),
         FamilyChannel(channelId = "UCQfwfsi5VrQ8yKZ-UWmAEFg", handle = "@france24_en", name = "FRANCE 24 English", category = "news"),
-        FamilyChannel(channelId = "UCdTyuXgmJkG_O8_75eqej-w", handle = "@france24_ar", name = "FRANCE 24 Arabic", category = "news"),
         FamilyChannel(channelId = "UCknLrEdhRCp1aegoMqRaCZg", handle = "@dwnews", name = "DW News", category = "news"),
         FamilyChannel(channelId = "UCVSNOxehfALut52NbkfRBaA", handle = "@voanews", name = "VOA News", category = "news"),
-        FamilyChannel(channelId = "UCx8MbRAMH-KNJuFLKdsmZ_w", handle = "", name = "VOA Urdu", category = "news"),
         FamilyChannel(channelId = "UCZFMm1mMw0F81Z37aaEzTUA", handle = "@ndtv", name = "NDTV", category = "news"),
         FamilyChannel(channelId = "UC_gUM8rL-Lrg6O3adPW9K1g", handle = "@wion", name = "WION", category = "news"),
         FamilyChannel(channelId = "UC_vt34wimdCzdkrzVejwX9g", handle = "@geonews", name = "Geo News", category = "news"),
         FamilyChannel(channelId = "UCMmpLL2ucRHAXbNHiCPyIyg", handle = "@arynewstvofficial", name = "ARY News", category = "news"),
         FamilyChannel(channelId = "UCaxR-D8FjZ-2otbU0_Y2grg", handle = "", name = "DawnNews", category = "news"),
-        FamilyChannel(channelId = "UC_xWTNsx7zA2uI0ydQikViA", handle = "@dawnnewsenglish", name = "DawnNews English", category = "news"),
         FamilyChannel(channelId = "UCJekW1Vj5fCVEGdye_mBN6Q", handle = "@samaatv", name = "Samaa TV", category = "news"),
         FamilyChannel(channelId = "UCnMBV5Iw4WqKILKue1nP6Hg", handle = "@dunyanewsofficial", name = "Dunya News", category = "news"),
-        FamilyChannel(channelId = "UC5RvV_LtR1dxPCVFGw6dxXA", handle = "@ptvnewsofficial", name = "PTV News", category = "news"),
-        FamilyChannel(channelId = "UCgBAPAcLsh_MAPvJprIz89w", handle = "@aajtvofficial", name = "Aaj News", category = "news"),
-        FamilyChannel(channelId = "UCTur7oM6mLL0rM2k0znuZpQ", handle = "@expressnewspkofficial", name = "Express News", category = "news"),
-        FamilyChannel(channelId = "UC0Um3pnZ2WGBEeoA3BX2sKw", handle = "@humnewspakistan", name = "Hum News", category = "news"),
-        FamilyChannel(channelId = "UCsgC5cbz3DE2Shh34gNKiog", handle = "@92newshdtv", name = "92 News HD", category = "news"),
         FamilyChannel(channelId = "UCahpxixMCwoANAftn6IxkTg", handle = "@alarabiya", name = "Al Arabiya", category = "news"),
-        FamilyChannel(channelId = "UCIZJ9a6P_nxCFJTmL0gh_IQ", handle = "@alarabiyaenglish", name = "Al Arabiya English", category = "news"),
         FamilyChannel(channelId = "UCR0fZh5SBxxMNYdg0VzRFkg", handle = "@middleeasteye", name = "Middle East Eye", category = "news"),
         FamilyChannel(channelId = "UCGYf0VFdlSTzcJghW9z1DAA", handle = "@thenationaluaechannel", name = "The National", category = "news"),
         FamilyChannel(channelId = "UC9YbjpvsFZytS0DnO1FnTKw", handle = "@almayadeennews", name = "Al Mayadeen News", category = "news"),
         FamilyChannel(channelId = "UCvHDpsWKADrDia0c99X37vg", handle = "@i24news_en", name = "i24NEWS English", category = "news"),
-        FamilyChannel(channelId = "UCgPYsPyGhhQJQ9zOUQDWDMA", handle = "@i24news_fr", name = "i24NEWS Français", category = "news"),
         FamilyChannel(channelId = "UCVbZYhcirOke2vipxs4lT2w", handle = "@anadoluajansi", name = "Anadolu Agency", category = "news"),
         FamilyChannel(channelId = "UCKQhfw-lzz0uKnE1fY1PsAA", handle = "@ahaber", name = "A Haber", category = "news"),
-        FamilyChannel(channelId = "UC9TDTjbOjFB9jADmPhSAPsw", handle = "@ntv", name = "NTV Turkey", category = "news"),
         FamilyChannel(channelId = "UCSrZ3UV4jOidv8ppoVuvW9Q", handle = "@euronews", name = "euronews", category = "news"),
         FamilyChannel(channelId = "UCgrNz-aDmcr2uuto8_DL2jg", handle = "@cgtn", name = "CGTN", category = "news"),
         FamilyChannel(channelId = "UCSPEjw8F2nQDtmUKPFNF7_A", handle = "@nhkworldjapan", name = "NHK WORLD-JAPAN", category = "news"),
         FamilyChannel(channelId = "UCVgO39Bk5sMo66-6o6Spn6Q", handle = "@abcnewsaustralia", name = "ABC News Australia", category = "news"),
         FamilyChannel(channelId = "UCuFFtHWoLl5fauMMD5Ww2jA", handle = "@cbcnews", name = "CBC News", category = "news"),
-        FamilyChannel(channelId = "UCKjU3KzdbJE1EFcHVqXC3_g", handle = "@cbcthenational", name = "CBC The National", category = "news"),
         FamilyChannel(channelId = "UCFQgi22Ht00CpaOQLtvZx2A", handle = "@itvnews", name = "ITV News", category = "news"),
         FamilyChannel(channelId = "UCTrQ7HXWRRxr7OsOtodr2_w", handle = "@channel4news", name = "Channel 4 News", category = "news"),
         FamilyChannel(channelId = "UCggJmYhtxBk1naIbZN541pw", handle = "@islamchanneltv", name = "Islam Channel", category = "news"),
         FamilyChannel(channelId = "UCl791j-PxhtLRyRUi2aP9jQ", handle = "@5pillars", name = "5Pillars", category = "news"),
         FamilyChannel(channelId = "UC8LjaLk1FQaIIzZMaRF9ujw", handle = "@muslimnetworktv", name = "Muslim Network TV", category = "news"),
         FamilyChannel(channelId = "UCMyzboNfTPpbHFKI49Jhxxg", handle = "@iqratv", name = "IQRA TV", category = "news"),
+        FamilyChannel(
+            channelId = "UC8NcXMG3A3f2aFQyGTpSNww",
+            handle = "@ChanneliNews",
+            name = "Channel i News",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCMMCiB3he7fwFUvLBRMTaZQ",
+            handle = "@SATVNews",
+            name = "SATV News",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCzAhx09RalPUWWwyEGtJjHA",
+            handle = "@BijoyTV",
+            name = "Bijoy TV",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC_guXhnGw8qfYmYeACTKB2A",
+            handle = "@GreenTVBangladesh",
+            name = "Green TV",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCUNEzmQ3zcifrhn0HwCgjYg",
+            handle = "@TheBusinessStandard",
+            name = "The Business Standard",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCB58cDLM3zZlgV6iIG9bdoQ",
+            handle = "@DhakaTribune",
+            name = "Dhaka Tribune",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCMbO-c2g92KPgOzYKDsTbug",
+            handle = "@DeshRupantor",
+            name = "Daily Desh Rupantor",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UC7PwfNI2zuokhCctN9VymLg",
+            handle = "@ProtidinerBangladesh",
+            name = "Daily Protidiner Bangladesh",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCWJkfdG6J2HUxOHrORuHZ2g",
+            handle = "@JagoNews24",
+            name = "Jago News 24",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCM7OnoexX8BYTX0js8Yf-kw",
+            handle = "@Sarabangla",
+            name = "Sarabangla",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCqhC0YFetNVYsCJR3nPCSQQ",
+            handle = "@Barta24",
+            name = "Barta24",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCNUncsqLnaOKz1jQ9cDjKSw",
+            handle = "@DBCNewsLive",
+            name = "DBC News Live",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCUbtdbJRpaXiUI_IlBOvPpA",
+            handle = "@PinakiBhattacharya",
+            name = "Pinaki Bhattacharya",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UClURnTgQiQpldGhtD4Fc7JQ",
+            handle = "@EliasHossain",
+            name = "Elias Hossain",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCHR-p802PibDYG1btNJcOew",
+            handle = "@MaasrangaNewsBD",
+            name = "Maasranga News",
+            category = "news",
+            isBangladeshi = true,
+        ),
+        FamilyChannel(
+            channelId = "UCzfkD4dNxVlIhUW3xaM4uxw",
+            handle = "@Banglanews24-Youtube",
+            name = "Banglanews24",
+            category = "news",
+            isBangladeshi = true,
+        ),
     )
 
 /**
@@ -947,4 +1659,55 @@ val REMOVED_SEED_IDS: Set<String> =
         // Press TV: the id kept failing to load, the channel was terminated repeatedly, and
         // @presstv belongs to a random person — no live official channel exists under this id.
         "UC-One4A1gGcN__aVAuBbHdA",
+        // Round 7 prune: 49 foreign channels removed to reach 100 foreign / 400 Bangladeshi
+        // target (reached 100 foreign / 204 Bangladeshi; see the header comment).
+        "UCumT1HMTXegYzESyPKH3pVg", // Mufti Tariq Masood Speeches
+        "UCYfp61fUZLuAZyO4MgrJZ_Q", // DarulIftaaUK
+        "UC__HMOrvqZ6NwPuDG_2Fmow", // ZamZam Academy
+        "UCnAsQQqfuBi1NJ8r4wcpr3A", // Ask Mufti Tariq Masood
+        "UC-Vsetv02QQ8ALtwoZTwdDQ", // Mufti Tariq Masood Special
+        "UCyxM7MgZkDe5stZpb6CiOcA", // Digital Mimbar
+        "UCx1Zr8zUKUHUtHEVq09b5vg", // Jannah Institute
+        "UCGzdb458mefm-8w-kV_qv6g", // Saad Tasleem
+        "UCvJyEIx_it2jFYP5M1OzGng", // One Message Foundation
+        "UC2cX3SmsdWsrRS8t_5zvzEw", // Safina Society
+        "UClx9GdAkydj7Lgu9DbFmY6w", // Sabeel Ahmed
+        "UCeZBhrU8xHcik0ZgtDwjsdA", // Sapience Institute
+        "UCTX8ZbNDi_HBoyjTWRw9fAg", // One Islam Productions
+        "UCtsN0omQRQ3_XgnLNioqxPQ", // Majed Mahmoud
+        "UCXHz5brnR9qwqvQvF3VJdgQ", // TheDeenShowTV
+        "UCVp5Ze24V2iFiUY1y0WtRaA", // Qalam Institute
+        "UCYr_FKFkc_pJq_sMKuaktnw", // Miftaah Institute
+        "UC9Jrzve0dhPoo_LexakSFMw", // Siedd
+        "UCpigf8GfwA6lU8f9VRbCv8g", // Ilyas Mao
+        "UC8-_GbgsWcUmZCpWGsC3QvA", // Firas
+        "UCOP4D0JslF9wFvc7x4rqh3A", // Safe Adam
+        "UC7oYY3yXJKw7ZU7ORlNOF2A", // Labbayk (UK)
+        "UCJZS2p3jZ_T8TiUMVE6bvVQ", // Muad
+        "UCTC4dW158I7bmI-N-Oh2jEA", // Mikhaael Mala
+        "UCsDrzNjBfjkyiicDskWp_mg", // Sintesa
+        "UCIqEQQFrIuK4uLIa3VCNeug", // Castillo Nasheeds
+        "UC0Fq9qaJ50wxu8XLmN-i-NQ", // UNIC
+        "UCOrEH-SzmP_Nmipsk0yfzMg", // Inteam Digital
+        "UC4lFkKHO5QEktDNBMhBQ25A", // LittleMuslim
+        "UCtlcIZVBdFPSAtCoNZsTusg", // Learn with Zakaria
+        "UCXtmVI108qG8GyWBswI7H7A", // Zuhaib Syed
+        "UC6uOx4sVqGNGrmJBUOh0zBg", // Deccani Diaries
+        "UCoIRbHvNK8qmjCMdQMbpQCg", // Smile2jannah Urdu & Hindi
+        "UC_yXEx3-Gk5drg9qhPzSQSg", // Al Jazeera Balkans
+        "UC5GvVahlgulCyo4cshSmbcg", // TRT Arabi
+        "UCdTyuXgmJkG_O8_75eqej-w", // FRANCE 24 Arabic
+        "UCx8MbRAMH-KNJuFLKdsmZ_w", // VOA Urdu
+        "UC_xWTNsx7zA2uI0ydQikViA", // DawnNews English
+        "UC5RvV_LtR1dxPCVFGw6dxXA", // PTV News
+        "UCgBAPAcLsh_MAPvJprIz89w", // Aaj News
+        "UCTur7oM6mLL0rM2k0znuZpQ", // Express News
+        "UC0Um3pnZ2WGBEeoA3BX2sKw", // Hum News
+        "UCsgC5cbz3DE2Shh34gNKiog", // 92 News HD
+        "UCgPYsPyGhhQJQ9zOUQDWDMA", // i24NEWS Français
+        "UC9TDTjbOjFB9jADmPhSAPsw", // NTV Turkey
+        "UCCv1Pd24oPErw5S7zJWltnQ", // AJ Mubasher
+        "UCvm8V4Dwtz0fbPGbpk7RYAg", // BBC News Urdu
+        "UCIZJ9a6P_nxCFJTmL0gh_IQ", // Al Arabiya English
+        "UCKjU3KzdbJE1EFcHVqXC3_g", // CBC The National
     )
