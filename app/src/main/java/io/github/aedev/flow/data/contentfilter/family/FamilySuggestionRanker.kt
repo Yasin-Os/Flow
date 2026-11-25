@@ -51,6 +51,16 @@ object FamilySuggestionRanker {
      * two layers admit, then orders category-first, Bangladeshi-first inside each tier,
      * newest-second. [limit] bounds the returned list; the lane caps downstream still apply.
      *
+     * Windowed scan: the pool is sorted first — the sort keys are cheap matcher lookups
+     * plus the timestamp — and the expensive layer-2 check ([FamilySearchRule.keepsVideo],
+     * giant-regex scans) then runs lazily in ranked order, stopping as soon as [limit]
+     * videos pass. The output is identical to filtering the whole pool first: the keep
+     * predicate is a pure per-video function and the sort is stable, so the first [limit]
+     * keepers of a sorted pool are exactly the filter-then-sort-then-take list, ties
+     * included. In the common case only ~[limit] plus a few skipped videos are
+     * regex-scanned instead of the whole ≤1,500-row pool — and [rank] runs twice per
+     * load (the main lane and the relevance lane), so the saving lands twice.
+     *
      * When the matcher has not loaded yet ([FamilyChannelMatcher.channelIds] empty) the
      * layers cannot tell an approved channel from any other, so nothing is filtered — the
      * pool is already the subscription mirror, and the order alone still applies. Filtering
@@ -63,26 +73,25 @@ object FamilySuggestionRanker {
         limit: Int = HOME_SUGGESTIONS_MAX,
     ): List<Video> {
         if (pool.isEmpty()) return emptyList()
-        val kept =
-            if (channels.channelIds.isEmpty()) {
-                pool
-            } else {
-                val rule = FamilySearchRule(channels, text)
-                pool.filter { video ->
-                    video.id.isNotBlank() &&
-                        channels.allows(video.channelId, video.channelHandle) &&
-                        rule.keepsVideo(video)
-                }
-            }
-        return kept
-            .sortedWith(
+        val sorted =
+            pool.sortedWith(
                 compareBy(
                     { tier(channels.categoryOf(it.channelId, it.channelHandle)) },
                     { bangladeshiRank(channels, it) },
                     { -it.timestamp },
                 ),
             )
+        if (channels.channelIds.isEmpty()) return sorted.take(limit)
+        val rule = FamilySearchRule(channels, text)
+        return sorted
+            .asSequence()
+            .filter { video ->
+                video.id.isNotBlank() &&
+                    channels.allows(video.channelId, video.channelHandle) &&
+                    rule.keepsVideo(video)
+            }
             .take(limit)
+            .toList()
     }
 
     /**
