@@ -30,7 +30,7 @@ interface CacheDao {
      */
     @Query(
         "SELECT * FROM subscription_feed_cache WHERE channelId IN (:channelIds) OR feedChannelId IN (:channelIds) " +
-            "ORDER BY timestamp DESC",
+            "ORDER BY timestamp DESC LIMIT 1500",
     )
     fun observeSubscriptionFeedForChannels(channelIds: List<String>): Flow<List<SubscriptionFeedEntity>>
 
