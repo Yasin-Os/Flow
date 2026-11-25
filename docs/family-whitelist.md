@@ -11,10 +11,19 @@ means no handle could be confirmed — the id is the match key.
 **Counts (243 channels): waz 65 (48 + 17 media) · Ummah Network 1 · ghazal 44 · tilawat 22 ·
 cartoons 8 · comedy 5 · drama 2 · news 96**
 
+**Bangladeshi vs foreign (round 6): 90 Bangladeshi, 153 foreign.** Bangladeshi entries
+carry `isBangladeshi = true` in the seed (waz 25 · ghazal 15 · tilawat 3 · cartoons 3 ·
+news 43 · ummah 1); the home feed and the suggestions lane rank Bangladeshi videos
+before foreign ones **inside each category tier** (waz/tilawat/ghazal first, news last),
+newest first within each step. The other 153 carry no marker and rank as foreign,
+including 7 genuinely uncertain ones deliberately left unboosted. Ranking never
+changes what is allowed: the whitelist and the blocklist still decide that.
+
 The shipped seed list is `app/src/main/java/io/github/aedev/flow/data/contentfilter/family/FamilySeedChannels.kt`.
-Existing installs gain new channels through the seed merge (`SEED_VERSION = 4`); a
+Existing installs gain new channels through the seed merge (`SEED_VERSION = 6`); a
 channel the PIN holder removed is never re-added, and ids the seed dropped
-(`REMOVED_SEED_IDS`) are pruned from existing installs. News entries carry `category = "news"`:
+(`REMOVED_SEED_IDS`) are pruned from existing installs. The merge also refreshes each
+stored entry's `category` and `isBangladeshi` marker from its seed counterpart. News entries carry `category = "news"`:
 they are whitelisted for news, but the entertainment-tier title filter still applies to
 their videos, so a music/drama upload from a news channel is blocked.
 
