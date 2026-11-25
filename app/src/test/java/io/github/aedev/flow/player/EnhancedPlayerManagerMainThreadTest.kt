@@ -6,7 +6,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.player.resolver.Media3JvmShims
 import io.mockk.verify
-import kotlin.concurrent.thread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -18,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowLooper
+import kotlin.concurrent.thread
 
 /**
  * The player lives on the main thread: ExoPlayer throws "Player is accessed on the wrong
