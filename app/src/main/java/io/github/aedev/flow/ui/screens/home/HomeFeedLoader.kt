@@ -3,6 +3,8 @@ package io.github.aedev.flow.ui.screens.home
 import android.content.Context
 import android.util.Log
 import io.github.aedev.flow.R
+import io.github.aedev.flow.data.contentfilter.family.FamilyMode
+import io.github.aedev.flow.data.contentfilter.family.FamilySuggestionRanker
 import io.github.aedev.flow.data.local.HomeFeedCacheRepository
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SubscriptionRepository
@@ -305,11 +307,20 @@ internal class HomeFeedLoader(
                             now = now,
                             freshSlotTarget = dynamicFreshSubSlots(userSubs.size),
                             subAvatarMap = subAvatarMap,
-                            // The family feed is newest first: no Neuro ranking, so no
-                            // recommendation work runs at all in family mode.
+                            // The family feed is category-weighted, not newest first: waz,
+                            // tilawat and ghazal surface first, then the other approved
+                            // categories, news last; recency decides within a tier. The ranker
+                            // also applies the family rule as a second layer, so a blocked
+                            // title — or a collaboration uploaded by a channel that is not
+                            // approved — never reaches a lane. No Neuro ranking runs in
+                            // family mode.
                             rank = { pool ->
                                 if (familyMode) {
-                                    pool.sortedByDescending { it.timestamp }
+                                    FamilySuggestionRanker.rank(
+                                        pool,
+                                        FamilyMode.channelMatcher(),
+                                        FamilyMode.textMatcher(),
+                                    )
                                 } else {
                                     FlowNeuroEngine.rank(
                                         pool,
@@ -320,7 +331,11 @@ internal class HomeFeedLoader(
                             },
                             rankRelevant = { pool ->
                                 if (familyMode) {
-                                    pool.sortedByDescending { it.timestamp }
+                                    FamilySuggestionRanker.rank(
+                                        pool,
+                                        FamilyMode.channelMatcher(),
+                                        FamilyMode.textMatcher(),
+                                    )
                                 } else {
                                     FlowNeuroEngine.rank(
                                         pool,
@@ -471,7 +486,13 @@ internal class HomeFeedLoader(
                         wave2.startWave2Discovery(finalMix, userSubs, taste)
                     }
                     lateMerges.startSubscriptionTopUp(userSubs, storedFeed)
-                    lateMerges.startChannelMemoryRefresh(userSubs)
+                    // No channel-memory refresh in the family app: it fetches remembered
+                    // channels' uploads and ranks them with the Neuro engine — recommendation
+                    // work the family feed never uses. The memory lane still renders from the
+                    // cached uploads the main feed already read.
+                    if (!familyMode) {
+                        lateMerges.startChannelMemoryRefresh(userSubs)
+                    }
                     if (!familyMode) {
                         val offTopicNeighbours = rawNeighbours.map { it.channelId }.toSet() - lanes.relevantNeighbourChannels
                         lateMerges.startNeighbourRefresh(neighbours, offTopicNeighbours, storedFeed, userSubs)
