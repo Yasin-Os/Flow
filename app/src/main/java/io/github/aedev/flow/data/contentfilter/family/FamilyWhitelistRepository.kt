@@ -283,8 +283,10 @@ class FamilyWhitelistRepository
              * `category` from the newly categorized seed, so the suggestions ranker can
              * order existing installs too. Round 6 bumped it to refresh every stored
              * entry's `isBangladeshi` marker from the seed, so Bangladeshi-first ranking
-             * reaches existing installs too.
+             * reaches existing installs too. Round 7 bumped it to rebuild the seed to
+             * 304 channels (100 foreign, 204 Bangladeshi): 49 foreign channels pruned,
+             * 110 Bangladeshi channels added, including a new tour category.
              */
-            const val SEED_VERSION = 6
+            const val SEED_VERSION = 7
         }
     }
