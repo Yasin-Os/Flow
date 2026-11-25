@@ -15,6 +15,12 @@ class FamilyTextMatcherTest {
                     name = "Somoy TV",
                     category = "news",
                 ),
+                FamilyChannel(
+                    channelId = "UCtour",
+                    handle = "@tourbd",
+                    name = "Tour BD",
+                    category = "tour",
+                ),
             ),
         )
 
@@ -135,6 +141,12 @@ class FamilyTextMatcherTest {
     fun `a whitelisted news channel still loses its music upload`() {
         assertThat(blocks("Bollywood Song News", channelId = "UCnews", handle = "@somoytv")).isTrue()
         assertThat(blocks("Hot News Today", channelId = "UCnews", handle = "@somoytv")).isFalse()
+    }
+
+    @Test
+    fun `a whitelisted tour channel still loses its music upload`() {
+        assertThat(blocks("Bollywood Song Tour", channelId = "UCtour", handle = "@tourbd")).isTrue()
+        assertThat(blocks("Sajek Tour Vlog", channelId = "UCtour", handle = "@tourbd")).isFalse()
     }
 
     @Test
