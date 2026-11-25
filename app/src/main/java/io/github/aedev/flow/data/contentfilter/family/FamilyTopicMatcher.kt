@@ -6,12 +6,14 @@ package io.github.aedev.flow.data.contentfilter.family
  * [FamilySearchRule]); the query itself matching a topic relaxes the result-side topic gate
  * to blocklist-only.
  *
- * The keyword sets come from Gemini's ApprovedTopicsList (Reply 3), verbatim. Generic words
- * alone do NOT match a topic: "lecture", "cartoon", "comedy", "drama", "song", "film", "story"
+ * The keyword sets come from Gemini's ApprovedTopicsList (Reply 3), verbatim, except the
+ * tour sets, which were written for the tour category (Round 7). Generic words alone do
+ * NOT match a topic: "lecture", "cartoon", "comedy", "drama", "song", "film", "story"
  * and "kids" appear in the lists only inside anchored phrases ("islamic cartoon", "হালাল
- * কমেডি"). Two exceptions: news words ("news", "সংবাদ", "খবর") match alone, and distinctive
- * Islamic words (waz/ওয়াজ, mahfil, tafsir, ghazal/গজল, nasheed, naat, tilawat, quran, qari,
- * hadith, islamic, allah, masjid, azan, ramadan, ...) match alone.
+ * কমেডি"). Three exceptions: news words ("news", "সংবাদ", "খবর") match alone, tour words
+ * ("tour", "travel", "ভ্রমণ") match alone, and distinctive Islamic words (waz/ওয়াজ,
+ * mahfil, tafsir, ghazal/গজল, nasheed, naat, tilawat, quran, qari, hadith, islamic,
+ * allah, masjid, azan, ramadan, ...) match alone.
  *
  * [matchTopic] returns the first matching topic in declaration order, with [ISLAMIC_GENERAL]
  * last — so "Islamic Drama" matches [HALAL_DRAMA], "Islamic Cartoon" matches [CARTOONS] and
@@ -21,7 +23,7 @@ package io.github.aedev.flow.data.contentfilter.family
  */
 class FamilyTopicMatcher {
     /**
-     * Compiled lazily: eight large alternations over ~2,800 topic terms. Building them
+     * Compiled lazily: nine large alternations over ~2,900 topic terms. Building them
      * in the constructor makes the first [FamilySearchRule] — built on the feed load
      * inside the suggestion ranker — pay the compile before any video is checked,
      * even though a whitelisted channel's videos never reach the topic gate at all.
@@ -74,6 +76,7 @@ class FamilyTopicMatcher {
                             HALAL_DRAMA_UR + HALAL_DRAMA_HI_UR_TRANSLIT
                     ),
                 FamilyTopic.NEWS to (NEWS_EN + NEWS_BN + NEWS_AR + NEWS_UR + NEWS_HI_UR_TRANSLIT),
+                FamilyTopic.TOUR to (TOUR_EN + TOUR_BN + TOUR_AR + TOUR_UR + TOUR_HI_UR_TRANSLIT),
                 FamilyTopic.ISLAMIC_GENERAL to
                     (
                         ISLAMIC_GENERAL_EN + ISLAMIC_GENERAL_BN + ISLAMIC_GENERAL_AR +
@@ -94,5 +97,6 @@ enum class FamilyTopic {
     HALAL_COMEDY,
     HALAL_DRAMA,
     NEWS,
+    TOUR,
     ISLAMIC_GENERAL,
 }
