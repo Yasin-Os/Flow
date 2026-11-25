@@ -309,8 +309,9 @@ internal class HomeFeedLoader(
                             subAvatarMap = subAvatarMap,
                             // The family feed is category-weighted, not newest first: waz,
                             // tilawat and ghazal surface first, then the other approved
-                            // categories, news last; recency decides within a tier. The ranker
-                            // also applies the family rule as a second layer, so a blocked
+                            // categories, news last; inside each tier Bangladeshi videos come
+                            // before foreign ones, and recency decides within each step. The
+                            // ranker also applies the family rule as a second layer, so a blocked
                             // title — or a collaboration uploaded by a channel that is not
                             // approved — never reaches a lane. No Neuro ranking runs in
                             // family mode.
