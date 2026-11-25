@@ -14,6 +14,7 @@ import io.github.aedev.flow.data.local.safePreferencesDataStore
 import io.github.aedev.flow.data.profile.StoreScope
 import io.github.aedev.flow.data.repository.YouTubeRepository
 import io.github.aedev.flow.di.ApplicationScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -74,6 +76,22 @@ class FamilyWhitelistRepository
 
         private val matcherState = MutableStateFlow(FamilyChannelMatcher.EMPTY)
 
+        /**
+         * Completes once this process's seed/merge pass has stored the whitelist (or failed
+         * trying). The home feed awaits it before its first load: seeding runs on a
+         * background coroutine at startup, and a feed that scopes itself before the seed
+         * lands reads an empty matcher and settles empty with nothing to retry it.
+         * Completing before [resolveMissingIds] is deliberate — resolution is best-effort
+         * network work and handle matching works without ids, so it must not hold the
+         * first paint back.
+         */
+        private val seedReady = CompletableDeferred<Unit>()
+
+        /** Waits for [seedReady], giving up after [timeoutMs] and letting the caller proceed with whatever the matcher holds. */
+        suspend fun awaitSeeded(timeoutMs: Long = SEED_READY_TIMEOUT_MS) {
+            withTimeoutOrNull(timeoutMs) { seedReady.await() }
+        }
+
         /** The matcher every surface reads synchronously; rebuilt whenever the list changes. */
         val matcher: StateFlow<FamilyChannelMatcher> = matcherState.asStateFlow()
 
@@ -99,13 +117,17 @@ class FamilyWhitelistRepository
          * matches by handle; the next launch retries.
          */
         suspend fun ensureSeeded() {
-            val current = channels.first()
-            if (current.isEmpty()) {
-                save(FAMILY_SEED_CHANNELS)
-                mirrorSubscriptions(FAMILY_SEED_CHANNELS)
-                setSeedVersion(SEED_VERSION)
-            } else {
-                mergeSeedUpdates(current)
+            try {
+                val current = channels.first()
+                if (current.isEmpty()) {
+                    save(FAMILY_SEED_CHANNELS)
+                    mirrorSubscriptions(FAMILY_SEED_CHANNELS)
+                    setSeedVersion(SEED_VERSION)
+                } else {
+                    mergeSeedUpdates(current)
+                }
+            } finally {
+                seedReady.complete(Unit)
             }
             resolveMissingIds()
         }
@@ -246,6 +268,9 @@ class FamilyWhitelistRepository
 
         private companion object {
             const val TAG = "FamilyWhitelist"
+
+            /** Seeding is local disk only (one JSON save, one subscription mirror), so this bound is generous. */
+            const val SEED_READY_TIMEOUT_MS = 10_000L
             val CHANNELS_KEY = stringPreferencesKey("channels")
             val SEED_VERSION_KEY = intPreferencesKey("seed_version")
 
