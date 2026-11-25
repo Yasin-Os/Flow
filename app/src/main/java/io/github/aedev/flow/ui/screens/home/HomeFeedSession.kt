@@ -53,6 +53,15 @@ internal class HomeFeedSession(
     @Volatile
     var cachedOnScreenIds: Set<String>? = null
 
+    /**
+     * Waits for this process's whitelist seed/merge pass (bounded), so the first feed load
+     * scopes itself from the approved channels instead of racing the startup seeding and
+     * reading an empty matcher. A no-op outside family mode; returns at once once seeded.
+     */
+    suspend fun awaitFamilySeeded() {
+        familyWhitelist?.awaitSeeded()
+    }
+
     suspend fun subscriptionScope(): HomeSubscriptionScope {
         val whitelistIds = familyWhitelist?.whitelistChannelIds()
         if (whitelistIds != null) {
