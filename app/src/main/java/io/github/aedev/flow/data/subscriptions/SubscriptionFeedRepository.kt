@@ -220,7 +220,7 @@ class SubscriptionFeedRepository
                                     cachedVideos = previewVideos,
                                     now = System.currentTimeMillis(),
                                     windowMs = SUBSCRIPTION_CACHE_WINDOW_MS,
-                                    maxItems = Int.MAX_VALUE,
+                                    maxItems = PREVIEW_MAX_ITEMS,
                                 ).withHighQualityThumbnails()
                     }
                     val settled = chunk.rssSettledChannelIds.orEmpty()
@@ -235,7 +235,8 @@ class SubscriptionFeedRepository
                             reelIds = reelIds,
                         )
                         writtenChannelIds += settled
-                        previewVideos = withContext(PerformanceDispatcher.diskIO) { loadCachedFeed(plan.scope) }
+                        // previewVideos already holds the merged fresh + cached rows;
+                        // the final `done` progress reloads from the DB once.
                     }
                     publish(
                         SubscriptionFeedRefreshProgress(
@@ -478,6 +479,9 @@ class SubscriptionFeedRepository
             const val SUBSCRIPTION_FEED_LOOKBACK_DAYS = 60L
             const val SUBSCRIPTION_CACHE_WINDOW_MS = SUBSCRIPTION_FEED_LOOKBACK_DAYS * 24L * 60L * 60L * 1000L
             const val MAX_ROWS_PER_CHANNEL = 60
+
+            /** Progress previews show at most what the feed read itself loads. */
+            const val PREVIEW_MAX_ITEMS = 1500
 
             /** Channels a single refresh covers in family mode: a quarter of the 243-channel seed. */
             const val FAMILY_REFRESH_MAX_CHANNELS = 60
