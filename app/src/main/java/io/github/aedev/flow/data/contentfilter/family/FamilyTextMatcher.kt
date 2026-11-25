@@ -21,9 +21,10 @@ import java.util.Locale
  *   channels title their own uploads "Bangla Islamic Song" and "Ramjan Music Video", so these
  *   words must never block a whitelisted channel. Non-whitelisted videos are already hidden
  *   on ranked surfaces; this tier matters at the player, on channel pages and in open search.
- *   Exception: whitelisted NEWS channels stay under this tier — they are approved for news,
- *   not for music/drama uploads, so a news channel's video titled with an entertainment word
- *   is still blocked (see [FamilyChannelMatcher.isNewsChannel]).
+ *   Exception: whitelisted NEWS and TOUR channels stay under this tier — they are approved
+ *   for news and tour respectively, not for music/drama uploads, so a news or tour channel's
+ *   video titled with an entertainment word is still blocked (see
+ *   [FamilyChannelMatcher.isNewsChannel] and [FamilyChannelMatcher.isTourChannel]).
  *
  * Before any tier is checked, the halal negations in [STRIP_BEFORE_MATCH] are stripped from
  * the text ("No Music Nasheed", "ইসলামী সংগীত", "music free", ...), so a nasheed that says
@@ -151,8 +152,8 @@ class FamilyTextMatcher(
      * Whether a video's title or description is blocked. The hard tier always applies, then
      * the vice tier (with its lecture exemption); the entertainment tier, the emoji check and
      * the channel-name check apply when the channel is not whitelisted — and the entertainment
-     * tier and the emoji check also when it is a whitelisted news channel, which is approved
-     * for news, not for music/drama uploads.
+     * tier and the emoji check also when it is a whitelisted news or tour channel, which is
+     * approved for news or tour, not for music/drama uploads.
      */
     fun blocks(
         title: String,
@@ -169,7 +170,12 @@ class FamilyTextMatcher(
         val viceExempt = isViceExempt(text)
         if (viceMatches && !viceExempt) return true
         val whitelisted = channelMatcher.allows(channelId, handle)
-        if (whitelisted && !channelMatcher.isNewsChannel(channelId, handle)) return false
+        if (
+            whitelisted && !channelMatcher.isNewsChannel(channelId, handle) &&
+            !channelMatcher.isTourChannel(channelId, handle)
+        ) {
+            return false
+        }
         if (!whitelisted && channelName.isNotBlank() && isBlockedChannelName(channelName)) {
             return true
         }
