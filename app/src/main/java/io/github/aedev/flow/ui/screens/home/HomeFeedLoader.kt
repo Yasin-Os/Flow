@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -144,6 +145,12 @@ internal class HomeFeedLoader(
                     }
                     session.currentQueryIndex = 0
 
+                    // The whitelist is seeded on a background coroutine at startup; on a
+                    // fresh install the first feed load can win that race and read an empty
+                    // matcher, which settles the home empty with nothing to retry it. Wait
+                    // for this process's seed pass (bounded, local disk only) before scoping
+                    // the feed, so the first paint is built from the approved channels.
+                    if (familyMode) session.awaitFamilySeeded()
                     val userSubs = session.subscriptionScope().boosted
                     val region = playerPreferences.trendingRegion.first()
                     val fetchStart = System.currentTimeMillis()
@@ -234,15 +241,26 @@ internal class HomeFeedLoader(
                         }
                     // In family mode the feed is the approved channels' uploads, and on a fresh
                     // install the store is empty: the first paint would be a black screen. Run the
-                    // subscription refresh first and wait for it (bounded), so the lanes build from
-                    // real uploads. Later launches keep the cached path: a non-empty store skips
-                    // the wait. The timeout abandons the rest of the sweep; the channels it did
-                    // not reach stay stale for the next cycle.
+                    // subscription refresh first, so the lanes build from real uploads. Later
+                    // launches keep the cached path: a non-empty store skips the wait.
+                    //
+                    // Paint the first chunk, not the whole sweep: the refresh persists each
+                    // settled RSS chunk to the store before it publishes the progress, so the
+                    // store holds real uploads after the first chunk lands — while the full
+                    // sweep still has the Shorts checks and the channel-tab fetches ahead of
+                    // it, and on a slow connection runs into the 30 s bound. The old code
+                    // collected the progress and threw every emission away, so first paint
+                    // waited for the whole sweep (or the timeout) with nothing on screen.
+                    // Stopping once a full page is in hand leaves the channels the sweep did
+                    // not reach stale for the next cycle, exactly as the timeout abandoning
+                    // the sweep does today.
                     if (familyMode && userSubs.isNotEmpty() && storedFeed.isEmpty()) {
                         runCatching {
                             withTimeoutOrNull(FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS) {
                                 val plan = subscriptionFeedRepository.planRefresh(force = false)
-                                subscriptionFeedRepository.refresh(plan).collect { }
+                                subscriptionFeedRepository.refresh(plan)
+                                    .takeWhile { progress -> !progress.finished && progress.videos.size < HOME_TARGET_SIZE }
+                                    .collect()
                             }
                         }
                         storedFeed =
