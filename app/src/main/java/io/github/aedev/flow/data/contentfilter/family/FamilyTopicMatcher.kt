@@ -20,11 +20,20 @@ package io.github.aedev.flow.data.contentfilter.family
  * before its own matching; the topic matcher must still see it).
  */
 class FamilyTopicMatcher {
-    private val topicPatterns: List<Pair<FamilyTopic, Regex>> =
+    /**
+     * Compiled lazily: eight large alternations over ~2,800 topic terms. Building them
+     * in the constructor makes the first [FamilySearchRule] — built on the feed load
+     * inside the suggestion ranker — pay the compile before any video is checked,
+     * even though a whitelisted channel's videos never reach the topic gate at all.
+     * The patterns compile on the first non-whitelisted video (or search query) that
+     * actually needs them, on that caller's thread.
+     */
+    private val topicPatterns: List<Pair<FamilyTopic, Regex>> by lazy {
         FamilyTopic.entries.mapNotNull { topic ->
             val terms = TOPIC_TERMS[topic].orEmpty()
             FamilyTextMatcher.buildPattern(terms)?.let { topic to it }
         }
+    }
 
     /** The first matching topic in declaration order, or null when no topic matches. */
     fun matchTopic(text: String): FamilyTopic? {
