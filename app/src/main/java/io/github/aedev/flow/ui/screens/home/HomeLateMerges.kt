@@ -83,7 +83,9 @@ internal class HomeLateMerges(
                 if (uploads.isEmpty()) return@launch
                 // Passive channel profiling: upload titles teach the engine what each channel is about.
                 runCatching { FlowNeuroEngine.onChannelUploadsObserved(uploads) }
-                subscriptionFeedRepository.mergeChannelTabUploads(uploads)
+                // The top-up already holds the stored feed this load painted from; passing it
+                // down saves the merge re-reading the whole cached feed from the store.
+                subscriptionFeedRepository.mergeChannelTabUploads(uploads, storedFeed)
                 mergeLateSubscriptions(uploads, userSubs)
             }
     }
