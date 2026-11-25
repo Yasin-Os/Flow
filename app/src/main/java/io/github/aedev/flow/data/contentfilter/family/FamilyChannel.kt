@@ -18,6 +18,11 @@ import kotlinx.serialization.Serializable
  * though the channel itself is approved. The field defaults to "" so stored entries written
  * before it existed still decode; an uncategorized channel ranks as an ordinary approved
  * channel, never as news.
+ *
+ * [isBangladeshi] marks a channel as Bangladeshi; the ranker surfaces Bangladeshi videos
+ * before foreign ones inside each category tier ([FamilySuggestionRanker]). It defaults to
+ * `false`, so stored entries written before it existed still decode — as foreign — and the
+ * order is unchanged until the seed carries the marker.
  */
 @Serializable
 data class FamilyChannel(
@@ -25,6 +30,7 @@ data class FamilyChannel(
     val handle: String,
     val name: String,
     val category: String = "",
+    val isBangladeshi: Boolean = false,
 )
 
 /**
@@ -47,6 +53,10 @@ class FamilyChannelMatcher(
     val categoryByChannelId: Map<String, String> = emptyMap(),
     /** The [FamilyChannel.category] of each normalized handle, for id-less entries. */
     val categoryByHandle: Map<String, String> = emptyMap(),
+    /** The resolved `UC…` ids of Bangladeshi whitelisted channels. */
+    val bangladeshiChannelIds: Set<String> = emptySet(),
+    /** Normalized handles of Bangladeshi whitelisted channels. */
+    val bangladeshiHandles: Set<String> = emptySet(),
     /** When true, every channel is allowed: the "no family filtering" matcher. */
     private val allowAll: Boolean = false,
 ) {
@@ -81,6 +91,16 @@ class FamilyChannelMatcher(
         }
         val normalized = handle?.let(AiHandle::normalize)
         return normalized?.let { categoryByHandle[it] }.orEmpty()
+    }
+
+    /** True when this channel is marked Bangladeshi ([FamilyChannel.isBangladeshi]). */
+    fun isBangladeshi(
+        channelId: String,
+        handle: String?,
+    ): Boolean {
+        if (channelId.isNotBlank() && channelId in bangladeshiChannelIds) return true
+        val normalized = handle?.let(AiHandle::normalize)
+        return normalized != null && normalized in bangladeshiHandles
     }
 
     /** True when this matcher can hide anything. */
@@ -140,6 +160,16 @@ class FamilyChannelMatcher(
                         .filter { it.category.isNotBlank() }
                         .mapNotNull { channel -> AiHandle.normalize(channel.handle)?.let { it to channel.category } }
                         .toMap(),
+                bangladeshiChannelIds =
+                    channels
+                        .filter { it.isBangladeshi }
+                        .mapNotNull { it.channelId.takeIf(String::isNotBlank) }
+                        .toSet(),
+                bangladeshiHandles =
+                    channels
+                        .filter { it.isBangladeshi }
+                        .mapNotNull { AiHandle.normalize(it.handle) }
+                        .toSet(),
             )
     }
 }
