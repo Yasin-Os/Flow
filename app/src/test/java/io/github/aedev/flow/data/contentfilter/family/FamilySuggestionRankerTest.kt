@@ -389,22 +389,23 @@ class FamilySuggestionRankerTest {
      * The pre-windowed implementation of [FamilySuggestionRanker.rank]: filter the whole
      * pool first, then sort, then take. The windowed scan must return exactly this list.
      */
-    private fun fullScanRank(pool: List<Video>, limit: Int): List<Video> {
+    private fun fullScanRank(
+        pool: List<Video>,
+        limit: Int,
+    ): List<Video> {
         val rule = FamilySearchRule(channels, text)
         return pool
             .filter { video ->
                 video.id.isNotBlank() &&
                     channels.allows(video.channelId, video.channelHandle) &&
                     rule.keepsVideo(video)
-            }
-            .sortedWith(
+            }.sortedWith(
                 compareBy(
                     { tierOf(channels.categoryOf(it.channelId, it.channelHandle)) },
                     { if (channels.isBangladeshi(it.channelId, it.channelHandle)) 0 else 1 },
                     { -it.timestamp },
                 ),
-            )
-            .take(limit)
+            ).take(limit)
     }
 
     private fun tierOf(category: String): Int =
