@@ -2,6 +2,7 @@
 - Home now suggests waz, Quran tilawat and ghazal first, then other approved videos, newest first inside each group
 - Every approved channel now carries its category, so suggestions always know what kind of video it is
 - Bangladeshi videos now come before foreign ones inside each group, and the home feed follows the same order
+- Tour and travel channels can now join the approved list, and their videos rank with the other general videos, after waz, tilawat and ghazal
 
 ## Improved
 - Suggestions only ever come from your 243 approved channels, and every suggested title still passes the safety filter
