@@ -12,6 +12,8 @@ class FamilySuggestionRankerTest {
                 FamilyChannel(channelId = "UCtilawat", handle = "@tilawat", name = "Tilawat", category = "tilawat"),
                 FamilyChannel(channelId = "UCghazal", handle = "@ghazal", name = "Ghazal", category = "ghazal"),
                 FamilyChannel(channelId = "UCnews", handle = "@news", name = "News", category = "news"),
+                FamilyChannel(channelId = "UCtour", handle = "@tour", name = "Tour", category = "tour"),
+                FamilyChannel(channelId = "UCtourbd", handle = "@tourbd", name = "Tour BD", category = "tour", isBangladeshi = true),
                 FamilyChannel(channelId = "UCcartoon", handle = "@cartoon", name = "Cartoons", category = "cartoons"),
                 FamilyChannel(channelId = "UCplain", handle = "@plain", name = "Plain"),
                 FamilyChannel(channelId = "UCwazbd", handle = "@wazbd", name = "Waz BD", category = "waz", isBangladeshi = true),
@@ -73,6 +75,37 @@ class FamilySuggestionRankerTest {
                 "cartoon-old",
                 "news-new",
             ).inOrder()
+    }
+
+    @Test
+    fun `tour ranks with the other categories after the religious core and before news`() {
+        val ranked =
+            homeFeed(
+                video("news", "UCnews", "Daily News", timestamp = 9_500L),
+                video("cartoon", "UCcartoon", "Islamic Cartoon", timestamp = 9_000L),
+                video("tour", "UCtour", "Cox's Bazar Tour", timestamp = 8_000L),
+                video("tour-bd", "UCtourbd", "Sajek Tour", timestamp = 1_000L),
+                video("waz", "UCwaz", "Waz Mahfil", timestamp = 1_000L),
+            )
+        assertThat(ranked.map { it.id })
+            .containsExactly(
+                "waz",
+                "tour-bd",
+                "cartoon",
+                "tour",
+                "news",
+            ).inOrder()
+    }
+
+    @Test
+    fun `bangladeshi tour still ranks after foreign waz`() {
+        // Bangladeshi-first applies inside a tier, it never lifts tour above waz.
+        val ranked =
+            homeFeed(
+                video("bd-tour", "UCtourbd", "Sajek Tour", timestamp = 9_000L),
+                video("foreign-waz", "UCwaz", "Waz Mahfil", timestamp = 1_000L),
+            )
+        assertThat(ranked.map { it.id }).containsExactly("foreign-waz", "bd-tour").inOrder()
     }
 
     @Test
@@ -184,6 +217,16 @@ class FamilySuggestionRankerTest {
                 video("ghazal-song", "UCghazal", "Bangla Islamic Song"),
             )
         assertThat(ranked.map { it.id }).containsExactly("ghazal-song")
+    }
+
+    @Test
+    fun `a tour channel music title is dropped but a clean tour title is kept`() {
+        val ranked =
+            homeFeed(
+                video("tour-song", "UCtour", "Bollywood Song Tour"),
+                video("tour-clean", "UCtour", "Sajek Tour Vlog"),
+            )
+        assertThat(ranked.map { it.id }).containsExactly("tour-clean")
     }
 
     @Test
@@ -355,6 +398,7 @@ class FamilySuggestionRankerTest {
     private fun tierOf(category: String): Int =
         when (category) {
             "waz", "tilawat", "ghazal" -> 0
+            "tour" -> 1
             "news" -> 2
             else -> 1
         }
