@@ -50,6 +50,21 @@ class FamilyTopicMatcherTest {
     }
 
     @Test
+    fun `tour matches by its distinctive words`() {
+        assertThat(topics.matchTopic("Sajek Tour")).isEqualTo(FamilyTopic.TOUR)
+        assertThat(topics.matchTopic("Cox's Bazar travel vlog")).isEqualTo(FamilyTopic.TOUR)
+        assertThat(topics.matchTopic("ভ্রমণ ব্লগ")).isEqualTo(FamilyTopic.TOUR)
+        assertThat(topics.matchTopic("সাজেক ভ্রমণ")).isEqualTo(FamilyTopic.TOUR)
+    }
+
+    @Test
+    fun `vlog trip and blog alone match nothing`() {
+        assertThat(topics.matchTopic("vlog")).isNull()
+        assertThat(topics.matchTopic("trip")).isNull()
+        assertThat(topics.matchTopic("blog")).isNull()
+    }
+
+    @Test
     fun `generic words alone match nothing`() {
         assertThat(topics.matchTopic("cartoon")).isNull()
         assertThat(topics.matchTopic("comedy")).isNull()
