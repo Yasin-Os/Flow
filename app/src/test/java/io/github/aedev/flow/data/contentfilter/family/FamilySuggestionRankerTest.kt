@@ -253,4 +253,109 @@ class FamilySuggestionRankerTest {
         // nothing is dropped: an empty matcher must never empty the feed.
         assertThat(ranked.map { it.id }).containsExactly("news", "waz").inOrder()
     }
+
+    @Test
+    fun `rank windowed scan returns exactly the full-scan list on a realistic pool`() {
+        val pool = realisticPool()
+        for (limit in listOf(5, FamilySuggestionRanker.HOME_SUGGESTIONS_MAX)) {
+            assertThat(FamilySuggestionRanker.rank(pool, channels, text, limit))
+                .containsExactlyElementsIn(fullScanRank(pool, limit))
+                .inOrder()
+        }
+    }
+
+    @Test
+    fun `rank windowed scan matches the full scan when fewer videos pass than the limit`() {
+        val pool =
+            listOf(
+                video("blocked-top", "UCwazbd", "Pornography in Society", timestamp = 99_000L),
+                video("good-1", "UCwazbd", "Bangladeshi Waz Mahfil", timestamp = 90_000L),
+                video("stranger", "UCunknown", "নতুন ওয়াজ মাহফিল", timestamp = 89_000L),
+                video("", "UCwaz", "Waz Mahfil", timestamp = 88_000L),
+                video("good-2", "UCtilawat", "Surah Al-Mulk", timestamp = 80_000L),
+            )
+        assertThat(FamilySuggestionRanker.rank(pool, channels, text))
+            .containsExactlyElementsIn(fullScanRank(pool, FamilySuggestionRanker.HOME_SUGGESTIONS_MAX))
+            .inOrder()
+    }
+
+    /**
+     * A realistic home pool: 69 videos across every tier, Bangladeshi and foreign — with
+     * hard-tier titles sitting at the very top of the ranking (so the window must scan past
+     * them, not stop at them), a stranger channel, a blank id, a blocked news title, and
+     * equal timestamps (stable-sort ties). 64 videos pass, so a limit of 20 stops the
+     * window after ~22 regex scans instead of 69.
+     */
+    private fun realisticPool(): List<Video> {
+        val pool = mutableListOf<Video>()
+        // Blocked videos outrank everything clean: the window must skip them, not fill with them.
+        pool += video("blocked-bd-waz-1", "UCwazbd", "Pornography in Society", timestamp = 99_000L)
+        pool += video("blocked-bd-waz-2", "UCwazbd", "Pornography in Society", timestamp = 98_000L)
+        pool += video("stranger", "UCunknown", "নতুন ওয়াজ মাহফিল", timestamp = 97_000L)
+        pool += video("", "UCwazbd", "Bangladeshi Waz Mahfil", timestamp = 96_000L)
+        for (i in 1..12) {
+            pool += video("bd-waz-$i", "UCwazbd", "Bangladeshi Waz Mahfil $i", timestamp = 90_000L - i * 1_000L)
+        }
+        for (i in 1..8) {
+            pool += video("waz-$i", "UCwaz", "Waz Mahfil $i", timestamp = 89_000L - i * 1_000L)
+        }
+        // Equal timestamps: the two Bangladeshi ties keep their pool order ahead of the foreign tie.
+        pool += video("bd-waz-tie-a", "UCwazbd", "Bangladeshi Waz Mahfil Tie A", timestamp = 75_000L)
+        pool += video("bd-waz-tie-b", "UCwazbd", "Bangladeshi Waz Mahfil Tie B", timestamp = 75_000L)
+        pool += video("waz-tie", "UCwaz", "Waz Mahfil Tie", timestamp = 75_000L)
+        for (i in 1..6) {
+            pool += video("bd-tilawat-$i", "UCtilawatbd", "Bangladeshi Tilawat $i", timestamp = 71_000L - i * 1_000L)
+            pool += video("tilawat-$i", "UCtilawat", "Surah Tilawat $i", timestamp = 70_000L - i * 1_000L)
+        }
+        for (i in 1..8) {
+            // No Bangladeshi ghazal channel in this matcher: all eight are foreign ghazal.
+            pool += video("ghazal-$i", "UCghazal", "Nasheed $i", timestamp = 62_000L - i * 1_000L)
+        }
+        for (i in 1..5) {
+            pool += video("bd-cartoon-$i", "UCcartoonbd", "Bangladeshi Islamic Cartoon $i", timestamp = 51_000L - i * 1_000L)
+            pool += video("cartoon-$i", "UCcartoon", "Islamic Cartoon $i", timestamp = 50_000L - i * 1_000L)
+        }
+        pool += video("plain-bd-1", "UCplainbd", "Bangladeshi Reminder 1", timestamp = 41_000L)
+        pool += video("plain-1", "UCplain", "Islamic Reminder 1", timestamp = 40_000L)
+        pool += video("plain-bd-2", "UCplainbd", "Bangladeshi Reminder 2", timestamp = 39_000L)
+        pool += video("plain-2", "UCplain", "Islamic Reminder 2", timestamp = 38_000L)
+        pool += video("plain-3", "UCplain", "Islamic Reminder 3", timestamp = 37_000L)
+        // News ranks last whatever its timestamp: even the newest blocked news title is
+        // never scanned once the window has filled from the higher tiers.
+        pool += video("blocked-news", "UCnews", "Bollywood Song News", timestamp = 99_500L)
+        for (i in 1..3) {
+            pool += video("bd-news-$i", "UCnewsbd", "Bangladesh News $i", timestamp = 30_000L - i * 1_000L)
+            pool += video("news-$i", "UCnews", "Daily News $i", timestamp = 31_000L - i * 1_000L)
+        }
+        return pool
+    }
+
+    /**
+     * The pre-windowed implementation of [FamilySuggestionRanker.rank]: filter the whole
+     * pool first, then sort, then take. The windowed scan must return exactly this list.
+     */
+    private fun fullScanRank(pool: List<Video>, limit: Int): List<Video> {
+        val rule = FamilySearchRule(channels, text)
+        return pool
+            .filter { video ->
+                video.id.isNotBlank() &&
+                    channels.allows(video.channelId, video.channelHandle) &&
+                    rule.keepsVideo(video)
+            }
+            .sortedWith(
+                compareBy(
+                    { tierOf(channels.categoryOf(it.channelId, it.channelHandle)) },
+                    { if (channels.isBangladeshi(it.channelId, it.channelHandle)) 0 else 1 },
+                    { -it.timestamp },
+                ),
+            )
+            .take(limit)
+    }
+
+    private fun tierOf(category: String): Int =
+        when (category) {
+            "waz", "tilawat", "ghazal" -> 0
+            "news" -> 2
+            else -> 1
+        }
 }
