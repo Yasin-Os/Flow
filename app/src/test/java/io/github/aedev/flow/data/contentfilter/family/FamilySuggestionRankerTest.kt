@@ -14,6 +14,11 @@ class FamilySuggestionRankerTest {
                 FamilyChannel(channelId = "UCnews", handle = "@news", name = "News", category = "news"),
                 FamilyChannel(channelId = "UCcartoon", handle = "@cartoon", name = "Cartoons", category = "cartoons"),
                 FamilyChannel(channelId = "UCplain", handle = "@plain", name = "Plain"),
+                FamilyChannel(channelId = "UCwazbd", handle = "@wazbd", name = "Waz BD", category = "waz", isBangladeshi = true),
+                FamilyChannel(channelId = "UCtilawatbd", handle = "@tilawatbd", name = "Tilawat BD", category = "tilawat", isBangladeshi = true),
+                FamilyChannel(channelId = "UCnewsbd", handle = "@newsbd", name = "News BD", category = "news", isBangladeshi = true),
+                FamilyChannel(channelId = "UCcartoonbd", handle = "@cartoonbd", name = "Cartoons BD", category = "cartoons", isBangladeshi = true),
+                FamilyChannel(channelId = "UCplainbd", handle = "@plainbd", name = "Plain BD", isBangladeshi = true),
             ),
         )
     private val text = FamilyTextMatcher.DEFAULT
@@ -78,6 +83,91 @@ class FamilySuggestionRankerTest {
                 video("plain", "UCplain", "Islamic Reminder", timestamp = 1_000L),
             )
         assertThat(ranked.map { it.id }).containsExactly("plain", "news").inOrder()
+    }
+
+    @Test
+    fun `bangladeshi waz ranks before a newer foreign waz`() {
+        val ranked =
+            homeFeed(
+                video("foreign-waz", "UCwaz", "Waz Mahfil", timestamp = 9_000L),
+                video("bd-waz", "UCwazbd", "Bangladeshi Waz Mahfil", timestamp = 1_000L),
+            )
+        assertThat(ranked.map { it.id }).containsExactly("bd-waz", "foreign-waz").inOrder()
+    }
+
+    @Test
+    fun `bangladeshi news still ranks after foreign waz`() {
+        // Bangladeshi-first applies inside a tier, it never lifts news above waz.
+        val ranked =
+            homeFeed(
+                video("bd-news", "UCnewsbd", "Bangladesh News", timestamp = 9_000L),
+                video("foreign-waz", "UCwaz", "Waz Mahfil", timestamp = 1_000L),
+            )
+        assertThat(ranked.map { it.id }).containsExactly("foreign-waz", "bd-news").inOrder()
+    }
+
+    @Test
+    fun `bangladeshi ranks first inside the other categories and inside news`() {
+        val ranked =
+            homeFeed(
+                video("news", "UCnews", "Daily News", timestamp = 9_000L),
+                video("cartoon-bd", "UCcartoonbd", "Bangladeshi Islamic Cartoon", timestamp = 1_000L),
+                video("news-bd", "UCnewsbd", "Bangladesh News", timestamp = 1_000L),
+                video("cartoon", "UCcartoon", "Islamic Cartoon", timestamp = 9_000L),
+            )
+        assertThat(ranked.map { it.id })
+            .containsExactly(
+                "cartoon-bd",
+                "cartoon",
+                "news-bd",
+                "news",
+            ).inOrder()
+    }
+
+    @Test
+    fun `a channel without the marker ranks as foreign`() {
+        val ranked =
+            homeFeed(
+                video("plain", "UCplain", "Islamic Reminder", timestamp = 9_000L),
+                video("plain-bd", "UCplainbd", "Bangladeshi Reminder", timestamp = 1_000L),
+            )
+        assertThat(ranked.map { it.id }).containsExactly("plain-bd", "plain").inOrder()
+    }
+
+    @Test
+    fun `related puts bangladeshi first inside the playing video's own category`() {
+        val playing = video("playing", "UCtilawat", "Surah Yasin")
+        val related =
+            FamilySuggestionRanker.suggestRelated(
+                playing = playing,
+                cachedFeed =
+                    listOf(
+                        playing,
+                        video("tilawat", "UCtilawat", "Surah Al-Mulk", timestamp = 9_000L),
+                        video("tilawat-bd", "UCtilawatbd", "Bangladeshi Tilawat", timestamp = 1_000L),
+                        video("waz", "UCwaz", "Waz Mahfil", timestamp = 8_000L),
+                    ),
+                channels = channels,
+                text = text,
+                watchedVideoIds = emptySet(),
+                hidesFromRecommendations = { false },
+            )
+        assertThat(related.map { it.id }).containsExactly("tilawat-bd", "tilawat", "waz").inOrder()
+    }
+
+    @Test
+    fun `rank orders bangladeshi before foreign in the home feed pool`() {
+        val ranked =
+            FamilySuggestionRanker.rank(
+                pool =
+                    listOf(
+                        video("foreign-waz", "UCwaz", "Waz Mahfil", timestamp = 9_000L),
+                        video("bd-waz", "UCwazbd", "Bangladeshi Waz Mahfil", timestamp = 1_000L),
+                    ),
+                channels = channels,
+                text = text,
+            )
+        assertThat(ranked.map { it.id }).containsExactly("bd-waz", "foreign-waz").inOrder()
     }
 
     @Test
