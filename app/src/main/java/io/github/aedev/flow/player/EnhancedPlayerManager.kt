@@ -857,6 +857,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun setVolumeBoost(volume: Float) {
+        if (!isOnMainThread()) {
+            mainHandler.post { setVolumeBoost(volume) }
+            return
+        }
         audioFeaturesManager?.setVolumeBoost(player, volume)
     }
 
@@ -1131,6 +1135,10 @@ class EnhancedPlayerManager private constructor() {
         preservePosition: Long? = null,
         subtitles: List<ResolvedCaption> = emptyList(),
     ) {
+        if (!isOnMainThread()) {
+            mainHandler.post { playLocalFile(videoId, filePath, savedSegments, preservePosition, subtitles) }
+            return
+        }
         Log.d(TAG, "playLocalFile: videoId=$videoId, path=$filePath, offlineSegments=${savedSegments?.size}, resumePos=$preservePosition")
         resetPlaybackStateForNewVideo(videoId)
         updateLivePlaybackMode(isLive = false)
@@ -1790,6 +1798,10 @@ class EnhancedPlayerManager private constructor() {
         index: Int,
         loadStreamsInPlayer: Boolean = true,
     ) {
+        if (!isOnMainThread()) {
+            mainHandler.post { playVideoAtIndex(index, loadStreamsInPlayer) }
+            return
+        }
         if (index == queue.currentIndex) return
         advanceAfterPage = null
         val video = queue.moveTo(index) ?: return
@@ -2089,6 +2101,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun restartFromAutoplayCountdown() {
+        if (!isOnMainThread()) {
+            mainHandler.post { restartFromAutoplayCountdown() }
+            return
+        }
         autoplayCountdownController.stop()
         releaseAdvanceWakeLock()
         player?.seekTo(0)
@@ -2573,6 +2589,10 @@ class EnhancedPlayerManager private constructor() {
     // ===== Playback Controls =====
 
     fun play() {
+        if (!isOnMainThread()) {
+            mainHandler.post { play() }
+            return
+        }
         startPausedVideoId = null
         if (audioOnlyMode.needsVideoRestore) {
             restoreVideoOutput()
@@ -2623,7 +2643,14 @@ class EnhancedPlayerManager private constructor() {
         return loaded
     }
 
-    fun pause() = player?.pause()
+    fun pause() {
+        if (!isOnMainThread()) {
+            Log.d(TAG, "pause() posted to main from=${Thread.currentThread().name}")
+            mainHandler.post { pause() }
+            return
+        }
+        player?.pause()
+    }
 
     /**
      * Nudges the playhead one frame.
@@ -2634,6 +2661,10 @@ class EnhancedPlayerManager private constructor() {
      * because it decodes forward from the preceding keyframe, which on YouTube can be seconds back.
      */
     fun stepFrame(forward: Boolean) {
+        if (!isOnMainThread()) {
+            mainHandler.post { stepFrame(forward) }
+            return
+        }
         val p = player ?: return
         if (p.isPlaying || currentIsLiveStream || p.isCurrentMediaItemLive) return
         val target =
@@ -2656,6 +2687,10 @@ class EnhancedPlayerManager private constructor() {
         position: Long,
         exact: Boolean = false,
     ) {
+        if (!isOnMainThread()) {
+            mainHandler.post { seekTo(position, exact) }
+            return
+        }
         val p = player ?: return
         val isLive = currentIsLiveStream || p.isCurrentMediaItemLive
         if (!isLive && !scrubPreviewing && skipSegmentAt(position)) return
@@ -2687,6 +2722,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun skipToSegmentEnd(endPositionMs: Long) {
+        if (!isOnMainThread()) {
+            mainHandler.post { skipToSegmentEnd(endPositionMs) }
+            return
+        }
         val p = player ?: return
         val isLive = currentIsLiveStream || p.isCurrentMediaItemLive
         if (!isLive && mediaLoader?.getActiveSabrOrchestrator() != null) {
@@ -2722,6 +2761,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun seekToLiveTimeline(position: Long) {
+        if (!isOnMainThread()) {
+            mainHandler.post { seekToLiveTimeline(position) }
+            return
+        }
         val p = player ?: return
         val isLive = currentIsLiveStream || p.isCurrentMediaItemLive
         val target = resolveSeekTarget(p, position)
@@ -2748,6 +2791,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun seekToLiveEdge(resetSpeed: Boolean = true) {
+        if (!isOnMainThread()) {
+            mainHandler.post { seekToLiveEdge(resetSpeed) }
+            return
+        }
         val p = player ?: return
         if (resetSpeed) {
             setPlaybackSpeed(1.0f)
@@ -2781,6 +2828,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun setScrubbingModeEnabled(enabled: Boolean) {
+        if (!isOnMainThread()) {
+            mainHandler.post { setScrubbingModeEnabled(enabled) }
+            return
+        }
         scrubPreviewing = enabled
         player?.let { p ->
             val isLive = currentIsLiveStream || p.isCurrentMediaItemLive
@@ -2802,6 +2853,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun replay() {
+        if (!isOnMainThread()) {
+            mainHandler.post { replay() }
+            return
+        }
         // The countdown keeps running behind a replay otherwise and switches video mid-way through it.
         if (autoplayCountdownController.stop()) releaseAdvanceWakeLock()
         player?.let { exoPlayer ->
@@ -2833,6 +2888,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun stop() {
+        if (!isOnMainThread()) {
+            mainHandler.post { stop() }
+            return
+        }
         autoplayJob?.cancel()
         autoplayJob = null
         releaseAdvanceWakeLock()
@@ -2877,7 +2936,13 @@ class EnhancedPlayerManager private constructor() {
 
     fun getDuration(): Long = player?.duration ?: 0L
 
-    fun isPlaying(): Boolean = player?.isPlaying ?: false
+    fun isPlaying(): Boolean =
+        if (isOnMainThread()) {
+            player?.isPlaying ?: false
+        } else {
+            // The player throws off its thread; the state mirrors whether it plays.
+            _playerState.value.isPlaying
+        }
 
     fun isPreparedForPlayback(videoId: String): Boolean {
         val p = player ?: return false
@@ -3101,6 +3166,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun switchAudioTrack(index: Int) {
+        if (!isOnMainThread()) {
+            mainHandler.post { switchAudioTrack(index) }
+            return
+        }
         if (index in availableAudioStreams.indices) {
             currentAudioStream = availableAudioStreams[index]
             val position = player?.currentPosition ?: 0L
@@ -3158,7 +3227,13 @@ class EnhancedPlayerManager private constructor() {
 
     // ===== Audio Features =====
 
-    fun setPlaybackSpeed(speed: Float) = audioFeaturesManager?.setPlaybackSpeed(player, speed)
+    fun setPlaybackSpeed(speed: Float) {
+        if (!isOnMainThread()) {
+            mainHandler.post { setPlaybackSpeed(speed) }
+            return
+        }
+        audioFeaturesManager?.setPlaybackSpeed(player, speed)
+    }
 
     fun toggleSkipSilence(isEnabled: Boolean) = audioFeaturesManager?.toggleSkipSilence(isEnabled, appContext)
 
@@ -3312,6 +3387,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun detachVideoSurface(holder: SurfaceHolder? = null) {
+        if (!isOnMainThread()) {
+            mainHandler.post { detachVideoSurface(holder) }
+            return
+        }
         val hadManagedSurface = surfaceManager?.getSurfaceHolder() != null
         surfaceManager?.detachVideoSurface(holder, player, appContext)
         if (hadManagedSurface) {
@@ -3329,6 +3408,10 @@ class EnhancedPlayerManager private constructor() {
     suspend fun awaitSurfaceReady(timeoutMillis: Long = 1000) = surfaceManager?.awaitSurfaceReady(timeoutMillis) ?: false
 
     fun continueVideoPlaybackInBackground() {
+        if (!isOnMainThread()) {
+            mainHandler.post { continueVideoPlaybackInBackground() }
+            return
+        }
         autoNextLog("continueVideoPlaybackInBackground")
         switchToAudioOnly()
         val p = player
@@ -3353,6 +3436,10 @@ class EnhancedPlayerManager private constructor() {
         trimLevel: Int,
         videoVisible: Boolean,
     ) {
+        if (!isOnMainThread()) {
+            mainHandler.post { handleMemoryPressure(trimLevel, videoVisible) }
+            return
+        }
         when (MemoryPressurePolicy.responseTo(trimLevel, videoVisible)) {
             MemoryPressureResponse.NONE -> {}
 
@@ -3405,6 +3492,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun switchToAudioOnly() {
+        if (!isOnMainThread()) {
+            mainHandler.post { switchToAudioOnly() }
+            return
+        }
         val p = player ?: return
         autoNextLog("switchToAudioOnly")
         enterAudioOnly(p)
@@ -3418,6 +3509,10 @@ class EnhancedPlayerManager private constructor() {
      * nothing. Coming back to the app restores video as it does after background playback.
      */
     fun parkVideoForBackground() {
+        if (!isOnMainThread()) {
+            mainHandler.post { parkVideoForBackground() }
+            return
+        }
         val p = player ?: return
         autoNextLog("parkVideoForBackground")
         enterAudioOnly(p)
@@ -3436,6 +3531,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun restoreVideoOutput() {
+        if (!isOnMainThread()) {
+            mainHandler.post { restoreVideoOutput() }
+            return
+        }
         val p = player ?: return
         val displayInteractive = isDisplayInteractive()
         // A 360 video's spherical view hands Media3 its own surface, so no managed holder ever exists.
@@ -3469,6 +3568,10 @@ class EnhancedPlayerManager private constructor() {
     fun isVideoSurfaceRestorePending(): Boolean = audioOnlyMode.restorePending
 
     fun setSurfaceReady(ready: Boolean) {
+        if (!isOnMainThread()) {
+            mainHandler.post { setSurfaceReady(ready) }
+            return
+        }
         surfaceManager?.setSurfaceReady(ready)
         if (ready) {
             val p = player
@@ -3537,6 +3640,10 @@ class EnhancedPlayerManager private constructor() {
     // ===== Clear & Release =====
 
     fun clearCurrentVideo() {
+        if (!isOnMainThread()) {
+            mainHandler.post { clearCurrentVideo() }
+            return
+        }
         preload.clear()
         audioOnlyMode.reset()
         setVideoTracksDisabled(false)
@@ -3567,6 +3674,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun clearAll() {
+        if (!isOnMainThread()) {
+            mainHandler.post { clearAll() }
+            return
+        }
         clearCurrentVideo()
         manualLoopEnabled = false
         autoplayCandidates = emptyList()
@@ -3623,6 +3734,10 @@ class EnhancedPlayerManager private constructor() {
     }
 
     fun release() {
+        if (!isOnMainThread()) {
+            mainHandler.post { release() }
+            return
+        }
         Log.d(TAG, "release() called")
         releaseAdvanceWakeLock()
         advanceWakeLock = null
@@ -3743,6 +3858,10 @@ class EnhancedPlayerManager private constructor() {
      * after a screen-off/on cycle (duration still 0 after all poll attempts).
      */
     fun handleRefocusStuck(videoId: String?) {
+        if (!isOnMainThread()) {
+            mainHandler.post { handleRefocusStuck(videoId) }
+            return
+        }
         val p = player ?: return
         if (isRecoveringStreams(videoId) || hasAbandonedPlayback()) return
         if (reloadClearedMediaIfNeeded(automatic = true)) {
