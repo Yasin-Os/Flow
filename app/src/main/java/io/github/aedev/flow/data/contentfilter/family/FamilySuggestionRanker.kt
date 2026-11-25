@@ -20,11 +20,14 @@ import io.github.aedev.flow.data.model.Video
  *    whitelisted channel passes outright). Reusing the rule keeps suggestions identical to
  *    what search and the player already admit.
  *
- * Ranking is category-weighted, then recency: waz, tilawat and ghazal/nasheed first, then
- * the other approved categories (cartoons, comedy, drama, ummah, and any channel whose
- * category has not been stored yet), then news last. Within a tier the newest upload wins.
- * [suggestRelated] additionally puts uploads from the playing video's own category first,
- * so a waz suggests more waz.
+ * Ranking is category-weighted, then Bangladeshi-first, then recency: waz, tilawat and
+ * ghazal/nasheed first, then the other approved categories (cartoons, comedy, drama, ummah,
+ * and any channel whose category has not been stored yet), then news last — and inside each
+ * tier, Bangladeshi videos before foreign ones, newest first within each step. So a
+ * Bangladeshi news video still ranks after a foreign waz video: Bangladeshi-first applies
+ * inside a tier, it never lifts a lower tier above a higher one. [suggestRelated]
+ * additionally puts uploads from the playing video's own category first, so a waz suggests
+ * more waz.
  *
  * Cost: one pass over the already-loaded cached rows, on the caller's background dispatcher,
  * capped outputs ([HOME_SUGGESTIONS_MAX], [RELATED_SUGGESTIONS_MAX]). Nothing here holds
@@ -45,8 +48,8 @@ object FamilySuggestionRanker {
     /**
      * Ranks an already-built home pool (watched- and exclusions-filtered by the caller, as
      * [io.github.aedev.flow.ui.screens.home.buildHomeFeedLanes] does): keeps only what the
-     * two layers admit, then orders category-first, newest-second. [limit] bounds the
-     * returned list; the lane caps downstream still apply.
+     * two layers admit, then orders category-first, Bangladeshi-first inside each tier,
+     * newest-second. [limit] bounds the returned list; the lane caps downstream still apply.
      *
      * When the matcher has not loaded yet ([FamilyChannelMatcher.channelIds] empty) the
      * layers cannot tell an approved channel from any other, so nothing is filtered — the
@@ -72,7 +75,13 @@ object FamilySuggestionRanker {
                 }
             }
         return kept
-            .sortedWith(compareBy({ tier(channels.categoryOf(it.channelId, it.channelHandle)) }, { -it.timestamp }))
+            .sortedWith(
+                compareBy(
+                    { tier(channels.categoryOf(it.channelId, it.channelHandle)) },
+                    { bangladeshiRank(channels, it) },
+                    { -it.timestamp },
+                ),
+            )
             .take(limit)
     }
 
@@ -100,15 +109,22 @@ object FamilySuggestionRanker {
                     channels.allows(video.channelId, video.channelHandle) &&
                     rule.keepsVideo(video)
             }.distinctBy { it.id }
-            .sortedWith(compareBy({ tier(channels.categoryOf(it.channelId, it.channelHandle)) }, { -it.timestamp }))
+            .sortedWith(
+                compareBy(
+                    { tier(channels.categoryOf(it.channelId, it.channelHandle)) },
+                    { bangladeshiRank(channels, it) },
+                    { -it.timestamp },
+                ),
+            )
             .take(limit)
     }
 
     /**
      * Related / up-next suggestions for [playing], from the same cached feed and layers as
      * [suggestHome]. The playing video itself never suggests itself; uploads from its own
-     * category come first, then the usual category order, newest first within each step.
-     * Not wired to the player yet — see the file header for why.
+     * category come first, then the usual category order, Bangladeshi first inside each
+     * tier, newest first within each step. Not wired to the player yet — see the file
+     * header for why.
      */
     fun suggestRelated(
         playing: Video,
@@ -144,10 +160,21 @@ object FamilySuggestionRanker {
                         }
                     },
                     { tier(channels.categoryOf(it.channelId, it.channelHandle)) },
+                    { bangladeshiRank(channels, it) },
                     { -it.timestamp },
                 ),
             ).take(limit)
     }
+
+    /**
+     * 0 — a Bangladeshi video; 1 — a foreign video. A channel without the marker yet
+     * (stored before Round 6, or a channel the PIN holder added themselves) ranks as
+     * foreign, so the order is unchanged until the seed carries the marker.
+     */
+    private fun bangladeshiRank(
+        channels: FamilyChannelMatcher,
+        video: Video,
+    ): Int = if (channels.isBangladeshi(video.channelId, video.channelHandle)) 0 else 1
 
     /**
      * 0 — waz, tilawat, ghazal: the categories the user asked to see more and more of.
