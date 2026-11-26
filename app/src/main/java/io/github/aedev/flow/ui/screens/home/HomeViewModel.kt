@@ -21,6 +21,7 @@ import io.github.aedev.flow.data.recommendation.NeighbourChannelsRepository
 import io.github.aedev.flow.data.repository.YouTubeRepository
 import io.github.aedev.flow.data.shorts.ShortsFeedRepository
 import io.github.aedev.flow.data.subscriptions.HomeSubscriptionUploads
+import io.github.aedev.flow.utils.NetworkState
 import io.github.aedev.flow.ui.screens.home.chips.ChipFeedContext
 import io.github.aedev.flow.ui.screens.home.chips.HomeChip
 import io.github.aedev.flow.ui.screens.home.chips.HomeChipFeeds
@@ -116,6 +117,7 @@ class HomeViewModel
                 neighbourChannels = neighbourChannels,
                 feedSources = feedSources,
                 persistentHomeFeedCache = persistentHomeFeedCache,
+                playerPreferences = playerPreferences,
             )
 
         private val feedLoader =
@@ -142,7 +144,12 @@ class HomeViewModel
 
         private val loadMore: HomeLoadMore =
             FeedPrefetchQueue(
-                prefetchAheadItemCount = HOME_PREFETCH_AHEAD_VIDEO_COUNT,
+                prefetchAheadItemCount =
+                    if (NetworkState.isOnWifi(appContext)) {
+                        HOME_PREFETCH_AHEAD_VIDEO_COUNT
+                    } else {
+                        HOME_PREFETCH_AHEAD_VIDEO_COUNT_CELLULAR
+                    },
                 triggerRemainingItems = HOME_PREFETCH_TRIGGER_REMAINING_VIDEOS,
             ).let { homePrefetchQueue ->
                 HomeLoadMore(
