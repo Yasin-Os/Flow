@@ -44,7 +44,7 @@ object NetworkModule {
     private const val MAX_REQUESTS_PER_HOST = 5 // Max per host
 
     private const val IMAGE_MAX_REQUESTS = 32
-    private const val IMAGE_MAX_REQUESTS_PER_HOST = 16
+    private const val IMAGE_MAX_REQUESTS_PER_HOST = 6
 
     @Provides
     @Singleton
@@ -86,10 +86,10 @@ object NetworkModule {
 
     /**
      * The client Coil fetches images with. Coil keeps its own disk cache, so this one has no HTTP
-     * cache, which would store every image a second time. It has its own dispatcher, so a screen of
-     * thumbnails is not queued five at a time behind API calls; i.ytimg speaks HTTP/2, which
-     * carries the extra requests on one connection. The connection pool, proxy and request log stay
-     * shared with the main client.
+     * cache, which would store every image a second time. It has its own dispatcher, capped at six
+     * requests per host, so a burst of thumbnails cannot starve the video segments on a slow link;
+     * i.ytimg speaks HTTP/2, which carries those requests on one connection. The connection pool,
+     * proxy and request log stay shared with the main client.
      */
     @Provides
     @Singleton
