@@ -91,6 +91,11 @@ class RssSubscriptionServiceTest {
 
     private suspend fun sweep(vararg channelIds: String) = service.fetchSubscriptionVideos(channelIds.toList()).last()
 
+    private suspend fun sweepOnMobileData(
+        vararg channelIds: String,
+        readAllTabs: Boolean = false,
+    ) = service.fetchSubscriptionVideos(channelIds.toList(), readAllTabs = readAllTabs, limitTabReadsToRssFailures = true).last()
+
     @Test
     fun `the stock membership call to action in a description does not hide the upload`() =
         runTest {
@@ -389,6 +394,45 @@ class RssSubscriptionServiceTest {
             coVerify(exactly = 1) { uploads.fetch("UCa", any(), any()) }
             coVerify(exactly = 0) { reelIndex.markReels(any(), any(), any()) }
             assertThat(chunk.videos.map { it.id }).containsExactly("v1", "older")
+        }
+
+    @Test
+    fun `on mobile data an all-reels RSS slice is taken as settled and its tabs are not browsed`() =
+        runTest {
+            reelIds = setOf("r1", "r2")
+            rss("UCa", entry("r1"), entry("r2", ageHours = 4))
+
+            val chunk = sweepOnMobileData("UCa")
+
+            coVerify(exactly = 0) { uploads.fetch(any(), any(), any()) }
+            assertThat(chunk.failedChannelIds).isEmpty()
+            assertThat(chunk.videos.map { it.id }).contains("r1")
+        }
+
+    @Test
+    fun `on mobile data a channel RSS could not reach is still browsed`() =
+        runTest {
+            coEvery { rssClient.fetch("UCa") } returns Result.failure(IOException("HTTP 404"))
+            coEvery { uploads.fetch("UCa", any(), any()) } returns
+                Result.success(ChannelUploads(owner = FeedItemOwner("UCa", "Channel"), videos = listOf(upload("v1", "UCa"))))
+
+            val chunk = sweepOnMobileData("UCa")
+
+            coVerify(exactly = 1) { uploads.fetch("UCa", any(), any()) }
+            assertThat(chunk.failedChannelIds).isEmpty()
+            assertThat(chunk.videos.map { it.id }).containsExactly("v1")
+        }
+
+    @Test
+    fun `on mobile data a small group skips the deep tab read but still classifies its held slice`() =
+        runTest {
+            rss("UCa", entry("v1"))
+
+            val chunk = sweepOnMobileData("UCa", readAllTabs = true)
+
+            coVerify(exactly = 0) { uploads.fetch(any(), any(), any()) }
+            coVerify(exactly = 1) { reelIndex.markReels("UCa", any(), any()) }
+            assertThat(chunk.videos.map { it.id }).containsExactly("v1")
         }
 
     private companion object {
