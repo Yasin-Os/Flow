@@ -106,6 +106,21 @@ class FamilyTextMatcher(
     private val stripPattern by lazy { buildPattern(STRIP_BEFORE_MATCH) }
 
     /**
+     * Compiles the four patterns the home feed's first load needs (hard, vice, exemption, strip),
+     * on the caller's thread. Call from a background thread at startup, after the seed is ready —
+     * never from Main: each pattern is a large alternation and the compile is the cost the first
+     * feed load would otherwise pay on its critical path. Later matches reuse the compiled
+     * patterns; warming the wrong instance (before the blocklist rebuilds its matcher) only
+     * wastes the warmup, it never changes a verdict.
+     */
+    fun warmup() {
+        hardPattern
+        vicePattern
+        exemptionPattern
+        stripPattern
+    }
+
+    /**
      * True when no tier has any words, so nothing can match. Read from the term lists,
      * not the patterns, so asking it never triggers a compile: the feed's exclusions
      * check this on the launch path before any text is matched.
