@@ -2,6 +2,7 @@ package io.github.aedev.flow.data.contentfilter.family
 
 import android.util.Log
 import io.github.aedev.flow.data.local.PlayerPreferences
+import io.github.aedev.flow.player.preferences.ThumbnailQuality
 
 /**
  * First-launch family setup, run from [io.github.aedev.flow.FlowApplication] on an IO coroutine.
@@ -24,6 +25,7 @@ object FamilySetup {
             playerPreferences.setMusicNavigationEnabled(false)
             playerPreferences.setSearchNavigationEnabled(true)
             playerPreferences.setHomeShortsShelfEnabled(false)
+            playerPreferences.setThumbnailQualityCellularIfUnset(ThumbnailQuality.MEDIUM)
         }.onFailure { Log.w(TAG, "Family navigation prefs failed", it) }
     }
 }
