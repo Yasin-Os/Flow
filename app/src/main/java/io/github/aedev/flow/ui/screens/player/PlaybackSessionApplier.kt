@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** The load a step belongs to: the video it resolved for, and the token saying it is still current. */
 internal data class LoadContext(
@@ -139,7 +140,24 @@ internal class PlaybackSessionApplier(
 
     private val dislikeCounts = DislikeCountLoader(uiState, isLoadCurrent, repository, playerPreferences, scope, networkDispatcher)
 
-    fun startDislikeLoad(load: LoadContext) = dislikeCounts.start(load)
+    /**
+     * Secondary work waits for the first frame, so it never competes with the first media
+     * segments on a slow link. A video that never renders one still gets its metadata after
+     * [FIRST_FRAME_WAIT_TIMEOUT_MS].
+     */
+    private fun deferUntilFirstFrame(
+        load: LoadContext,
+        block: () -> Unit,
+    ) {
+        scope.launch {
+            withTimeoutOrNull(FIRST_FRAME_WAIT_TIMEOUT_MS) {
+                playerManager.firstFrameVideoId.first { it == load.videoId }
+            }
+            if (isLoadCurrent(load.token)) block()
+        }
+    }
+
+    fun startDislikeLoad(load: LoadContext) = deferUntilFirstFrame(load) { dislikeCounts.start(load) }
 
     suspend fun prepareLocalMedia(
         load: LoadContext,
@@ -434,5 +452,8 @@ internal class PlaybackSessionApplier(
 
     private companion object {
         const val TAG = "PlaybackSessionApplier"
+
+        /** How long a deferred fetch waits for the first frame before running anyway. */
+        const val FIRST_FRAME_WAIT_TIMEOUT_MS = 15_000L
     }
 }
