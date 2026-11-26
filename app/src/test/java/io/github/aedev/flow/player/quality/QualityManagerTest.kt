@@ -81,6 +81,26 @@ class QualityManagerTest {
     }
 
     @Test
+    fun `on mobile data without a fresh seed Auto starts at most at 360p`() {
+        assertThat(
+            manager(estimateBps = 7_000_000L)
+                .selectSmartInitialQuality(isWifi = false, hasFreshBandwidthSeed = false)!!.testHeight,
+        ).isEqualTo(360)
+    }
+
+    @Test
+    fun `on Wi-Fi or with a fresh seed Auto starts uncapped`() {
+        assertThat(
+            manager(estimateBps = 7_000_000L)
+                .selectSmartInitialQuality(isWifi = false, hasFreshBandwidthSeed = true)!!.testHeight,
+        ).isEqualTo(1080)
+        assertThat(
+            manager(estimateBps = 7_000_000L)
+                .selectSmartInitialQuality(isWifi = true, hasFreshBandwidthSeed = false)!!.testHeight,
+        ).isEqualTo(1080)
+    }
+
+    @Test
     fun `without a bandwidth estimate Auto assumes 5 Mbps`() {
         assertThat(manager(estimateBps = null).selectSmartInitialQuality()!!.testHeight).isEqualTo(720)
     }
