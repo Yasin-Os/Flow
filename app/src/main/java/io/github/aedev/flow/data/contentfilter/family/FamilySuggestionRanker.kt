@@ -1,6 +1,7 @@
 package io.github.aedev.flow.data.contentfilter.family
 
 import io.github.aedev.flow.data.model.Video
+import java.util.PriorityQueue
 
 /**
  * The safe suggestions system: every suggestion comes from the approved channels' uploads
@@ -51,15 +52,17 @@ object FamilySuggestionRanker {
      * two layers admit, then orders category-first, Bangladeshi-first inside each tier,
      * newest-second. [limit] bounds the returned list; the lane caps downstream still apply.
      *
-     * Windowed scan: the pool is sorted first — the sort keys are cheap matcher lookups
-     * plus the timestamp — and the expensive layer-2 check ([FamilySearchRule.keepsVideo],
-     * giant-regex scans) then runs lazily in ranked order, stopping as soon as [limit]
-     * videos pass. The output is identical to filtering the whole pool first: the keep
-     * predicate is a pure per-video function and the sort is stable, so the first [limit]
-     * keepers of a sorted pool are exactly the filter-then-sort-then-take list, ties
-     * included. In the common case only ~[limit] plus a few skipped videos are
-     * regex-scanned instead of the whole ≤1,500-row pool — and [rank] runs twice per
-     * load (the main lane and the relevance lane), so the saving lands twice.
+     * Windowed scan: instead of sorting the whole pool, a heap yields it in the same order the
+     * full stable sort would — ties break on pool index, exactly as the stable sort did — and
+     * the expensive layer-2 check ([FamilySearchRule.keepsVideo], giant-regex scans) then runs
+     * lazily in ranked order, stopping as soon as [limit] videos pass. The output is identical
+     * to filtering the whole pool first: the keep predicate is a pure per-video function and
+     * the heap order is the sorted order, so the first [limit] keepers are exactly the
+     * filter-then-sort-then-take list, ties included. In the common case only ~[limit] plus a
+     * few skipped videos are regex-scanned instead of the whole ≤1,500-row pool — and [rank]
+     * runs twice per load (the main lane and the relevance lane), so the saving lands twice.
+     * Building the heap is O(N) and each pop O(log N), so ranking costs the pops the window
+     * actually reads instead of a full sort.
      *
      * When the matcher has not loaded yet ([FamilyChannelMatcher.channelIds] empty) the
      * layers cannot tell an approved channel from any other, so nothing is filtered — the
@@ -73,24 +76,36 @@ object FamilySuggestionRanker {
         limit: Int = HOME_SUGGESTIONS_MAX,
     ): List<Video> {
         if (pool.isEmpty()) return emptyList()
-        val sorted =
-            pool.sortedWith(
-                compareBy(
-                    { tier(channels.categoryOf(it.channelId, it.channelHandle)) },
-                    { bangladeshiRank(channels, it) },
-                    { -it.timestamp },
-                ),
+        val order =
+            compareBy<Video>(
+                { tier(channels.categoryOf(it.channelId, it.channelHandle)) },
+                { bangladeshiRank(channels, it) },
+                { -it.timestamp },
             )
-        if (channels.channelIds.isEmpty()) return sorted.take(limit)
+        // Indices, not videos, sit in the heap: the tie-break is the pool index, which is
+        // what makes the popped order identical to the stable full sort's order.
+        val queue =
+            PriorityQueue<Int>(pool.size) { a, b ->
+                val compared = order.compare(pool[a], pool[b])
+                if (compared != 0) compared else a - b
+            }
+        queue.addAll(pool.indices)
+        if (channels.channelIds.isEmpty()) {
+            return generateSequence { queue.poll() }.take(limit).map { pool[it] }.toList()
+        }
         val rule = FamilySearchRule(channels, text)
-        return sorted
-            .asSequence()
-            .filter { video ->
-                video.id.isNotBlank() &&
-                    channels.allows(video.channelId, video.channelHandle) &&
-                    rule.keepsVideo(video)
-            }.take(limit)
-            .toList()
+        val kept = ArrayList<Video>(limit)
+        while (kept.size < limit) {
+            val index = queue.poll() ?: break
+            val video = pool[index]
+            if (video.id.isNotBlank() &&
+                channels.allows(video.channelId, video.channelHandle) &&
+                rule.keepsVideo(video)
+            ) {
+                kept += video
+            }
+        }
+        return kept
     }
 
     /**
