@@ -87,7 +87,14 @@ class PlaybackLoadResolver
                 }
 
                 val innerTubeDeferred =
-                    scope.async(networkDispatcher) { extractInnerTube(videoId, forceSabr = request.escalateToSabr) }
+                    scope.async(networkDispatcher) {
+                        extractInnerTube(
+                            videoId,
+                            forceSabr = request.escalateToSabr,
+                            isWifi = request.isWifi,
+                            bandwidthEstimateBps = request.bandwidthEstimateBps,
+                        )
+                    }
 
                 // Startup-critical disk reads, resolved in parallel with stream extraction so the
                 // playback-preparation path below never blocks on DataStore/DB.
@@ -153,7 +160,12 @@ class PlaybackLoadResolver
                 Log.w(TAG, "Forced-SABR reload for $videoId produced no SABR session — retrying the full client ladder")
                 innerTubeResult =
                     withTimeoutOrNull(INNERTUBE_TIMEOUT_MS) {
-                        InnerTubeVideoStreamExtractor.extract(videoId, forceSabr = false)
+                        InnerTubeVideoStreamExtractor.extract(
+                            videoId,
+                            forceSabr = false,
+                            bandwidthEstimateBps = request.bandwidthEstimateBps,
+                            isWifi = request.isWifi,
+                        )
                     }?.takeIf { innerTubeCanStartPlayback(it) }
                 currentCoroutineContext().ensureActive()
                 if (!isCurrent()) return
@@ -226,14 +238,26 @@ class PlaybackLoadResolver
         private suspend fun extractInnerTube(
             videoId: String,
             forceSabr: Boolean,
+            isWifi: Boolean,
+            bandwidthEstimateBps: Long,
         ): InnerTubeVideoStreamExtractor.VideoExtractionResult? =
             try {
                 if (forceSabr) {
-                    InnerTubeVideoStreamExtractor.extract(videoId, forceSabr = true)
+                    InnerTubeVideoStreamExtractor.extract(
+                        videoId,
+                        forceSabr = true,
+                        bandwidthEstimateBps = bandwidthEstimateBps,
+                        isWifi = isWifi,
+                    )
                 } else {
                     InnerTubeVideoStreamExtractor.takePromoted(videoId)
                         ?: withTimeoutOrNull(INNERTUBE_TIMEOUT_MS) {
-                            InnerTubeVideoStreamExtractor.extract(videoId, forceSabr = false)
+                            InnerTubeVideoStreamExtractor.extract(
+                                videoId,
+                                forceSabr = false,
+                                bandwidthEstimateBps = bandwidthEstimateBps,
+                                isWifi = isWifi,
+                            )
                         }
                 }
             } catch (e: CancellationException) {
