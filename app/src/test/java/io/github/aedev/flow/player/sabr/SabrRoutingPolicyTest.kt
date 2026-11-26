@@ -19,6 +19,25 @@ class SabrRoutingPolicyTest {
     }
 
     @Test
+    fun `the sabr upgrade waits less on mobile data`() {
+        assertThat(SabrRoutingPolicy.upgradeBudgetMs(isWifi = true)).isEqualTo(3_000L)
+        assertThat(SabrRoutingPolicy.upgradeBudgetMs(isWifi = false)).isEqualTo(1_000L)
+    }
+
+    @Test
+    fun `a slow mobile link skips the sabr upgrade`() {
+        // Below 2 Mbps on mobile data the direct result already plays; the upgrade is not worth its wait.
+        assertThat(SabrRoutingPolicy.shouldAttemptSabrUpgrade(360, 1_000_000L, false)).isFalse()
+        // At the threshold, and with an unknown estimate (0), the upgrade still runs.
+        assertThat(SabrRoutingPolicy.shouldAttemptSabrUpgrade(360, 2_000_000L, false)).isTrue()
+        assertThat(SabrRoutingPolicy.shouldAttemptSabrUpgrade(360, 0L, false)).isTrue()
+        // Wi-Fi always attempts it, however slow the estimate.
+        assertThat(SabrRoutingPolicy.shouldAttemptSabrUpgrade(360, 1_000_000L, true)).isTrue()
+        // The floor check still applies first: a tall direct ladder never upgrades.
+        assertThat(SabrRoutingPolicy.shouldAttemptSabrUpgrade(720, 10_000_000L, false)).isFalse()
+    }
+
+    @Test
     fun `sabr is preferred only when it beats the direct ceiling`() {
         // SABR 1080p vs direct 360p -> upgrade
         assertThat(SabrRoutingPolicy.shouldPreferSabr(false, 1080, 360)).isTrue()
