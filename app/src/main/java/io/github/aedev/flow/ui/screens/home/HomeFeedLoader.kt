@@ -214,16 +214,24 @@ internal class HomeFeedLoader(
 
                     Log.d(HOME_LOG_TAG, "Wave 1 fetch completed in ${System.currentTimeMillis() - fetchStart}ms")
 
+                    // The lanes build without an avatar map in family mode: the rendered cards
+                    // are enriched after assembly, from a map built for their channels only
+                    // (see renderedAvatarMap below). The old code decoded all 500 subscriptions
+                    // here for cards the lanes never show.
                     val subAvatarMap: Map<String, String> =
-                        runCatching {
-                            subscriptionRepository
-                                .getAllSubscriptions()
-                                .first()
-                                .filter {
-                                    it.channelThumbnail.isNotEmpty() &&
-                                        !ThumbnailUrlResolver.isUnusableChannelAvatar(it.channelThumbnail)
-                                }.associate { it.channelId to it.channelThumbnail }
-                        }.getOrElse { emptyMap() }
+                        if (familyMode) {
+                            emptyMap()
+                        } else {
+                            runCatching {
+                                subscriptionRepository
+                                    .getAllSubscriptions()
+                                    .first()
+                                    .filter {
+                                        it.channelThumbnail.isNotEmpty() &&
+                                            !ThumbnailUrlResolver.isUnusableChannelAvatar(it.channelThumbnail)
+                                    }.associate { it.channelId to it.channelThumbnail }
+                            }.getOrElse { emptyMap() }
+                        }
 
                     // Extract shorts from all sources for the shelf, ranked by FlowNeuro
                     val now = System.currentTimeMillis()
@@ -251,16 +259,16 @@ internal class HomeFeedLoader(
                     // it, and on a slow connection runs into the 30 s bound. The old code
                     // collected the progress and threw every emission away, so first paint
                     // waited for the whole sweep (or the timeout) with nothing on screen.
-                    // Stopping once a full page is in hand leaves the channels the sweep did
-                    // not reach stale for the next cycle, exactly as the timeout abandoning
-                    // the sweep does today.
+                    // Stopping once 16 videos are in hand — a first screenful, not the full
+                    // 40-video page — leaves the channels the sweep did not reach stale for
+                    // the next cycle, exactly as the timeout abandoning the sweep does today.
                     if (familyMode && userSubs.isNotEmpty() && storedFeed.isEmpty()) {
                         runCatching {
                             withTimeoutOrNull(FAMILY_FIRST_LAUNCH_REFRESH_TIMEOUT_MS) {
                                 val plan = subscriptionFeedRepository.planRefresh(force = false)
                                 subscriptionFeedRepository
                                     .refresh(plan)
-                                    .takeWhile { progress -> !progress.finished && progress.videos.size < HOME_TARGET_SIZE }
+                                    .takeWhile { progress -> !progress.finished && progress.videos.size < FIRST_LAUNCH_TARGET_SIZE }
                                     .collect()
                             }
                         }
@@ -419,21 +427,22 @@ internal class HomeFeedLoader(
                     )
 
                     val sourceById = mix.sourceMix.items.associate { it.video.id to it.source }
-                    val spacedMix =
-                        repository.enrichLikelyCollabAvatarStacks(
-                            spaceByChannel(
-                                rhythmBySource(
-                                    finalMix,
-                                    isSubscribed = { it.channelId in userSubs },
-                                    sourceOf = { sourceById[it.id] },
-                                    keepTop = mix.freshAdded,
-                                    deferExtra = true,
-                                    minSize = FIRST_PAGE_MIN_SIZE,
-                                ),
-                                gap = CHANNEL_GAP,
+                    val unmixed =
+                        spaceByChannel(
+                            rhythmBySource(
+                                finalMix,
+                                isSubscribed = { it.channelId in userSubs },
+                                sourceOf = { sourceById[it.id] },
+                                keepTop = mix.freshAdded,
+                                deferExtra = true,
+                                minSize = FIRST_PAGE_MIN_SIZE,
                             ),
-                            limit = 8,
+                            gap = CHANNEL_GAP,
                         )
+                    // Avatars for the rendered cards only: the lanes no longer carry them in
+                    // family mode, and the backlog's cards are enriched when load-more appends
+                    // them. The collaboration stacks fill in after paint, below.
+                    val spacedMix = if (familyMode) unmixed.enrichAvatars(renderedAvatarMap(unmixed)) else unmixed
                     val renderedIds = spacedMix.mapTo(HashSet()) { it.id }
                     val origins =
                         pageOrigins(
@@ -469,7 +478,22 @@ internal class HomeFeedLoader(
                         }
                     }
                     HomeFeedCache.update(visibleFeed, rankedShorts ?: uiState.value.shorts)
-                    persistentHomeFeedCache.saveLastFeed(spacedMix)
+                    // Collaboration avatar stacks fill in after paint, as the hydrate path already
+                    // does: they are cosmetic, and the load used to wait on them before the first
+                    // card showed. The saved feed keeps the hydrated copy.
+                    val hydratedMix = repository.enrichLikelyCollabAvatarStacks(spacedMix, limit = 8)
+                    if (hydratedMix != spacedMix) {
+                        val hydratedById = hydratedMix.associateBy { it.id }
+                        uiState.update { state ->
+                            val pending = state.pendingFeed
+                            if (pending != null) {
+                                state.copy(pendingFeed = pending.copy(videos = pending.videos.map { hydratedById[it.id] ?: it }))
+                            } else {
+                                state.copy(videos = state.videos.map { hydratedById[it.id] ?: it })
+                            }
+                        }
+                    }
+                    persistentHomeFeedCache.saveLastFeed(hydratedMix)
                     persistentHomeFeedCache.saveReserve(reserveCandidates)
                     if (trace != null) {
                         snapshotRecorder.record(
@@ -529,6 +553,26 @@ internal class HomeFeedLoader(
                     settleWithoutFeed(error = appContext.getString(R.string.error_failed_to_load_feed))
                 }
             }
+    }
+
+    /**
+     * Avatars for the rendered cards only, from the mirrored subscriptions: the old code built a
+     * 500-entry map before assembly, decoding every subscription for cards the lanes never show.
+     * The returned map holds at most the rendered videos' channels; a video whose channel has no
+     * usable avatar keeps whatever the store row already carried.
+     */
+    private suspend fun renderedAvatarMap(videos: List<Video>): Map<String, String> {
+        val renderedChannels = videos.mapTo(HashSet()) { it.channelId }
+        return runCatching {
+            subscriptionRepository
+                .getAllSubscriptions()
+                .first()
+                .filter {
+                    it.channelId in renderedChannels &&
+                        it.channelThumbnail.isNotEmpty() &&
+                        !ThumbnailUrlResolver.isUnusableChannelAvatar(it.channelThumbnail)
+                }.associate { it.channelId to it.channelThumbnail }
+        }.getOrElse { emptyMap() }
     }
 
     /** Keeps the recorded snapshot's shown feed current as wave 2, late uploads and load-more add to it. */
