@@ -122,16 +122,21 @@ object InnerTubeVideoStreamExtractor {
     /**
      * @param audioOnly the caller plays only [VideoExtractionResult.audioFormats], so a capped
      *   video ladder is not worth the SABR quality upgrade's wait.
+     * @param bandwidthEstimateBps the player meter's current estimate (0 when unknown): on mobile
+     *   data below ~2 Mbps the SABR upgrade is skipped and the playable direct result ships.
+     * @param isWifi whether the device is on Wi-Fi: the upgrade always runs there, on the full budget.
      */
     @OptIn(UnstableApi::class)
     suspend fun extract(
         videoId: String,
         forceSabr: Boolean = false,
         audioOnly: Boolean = false,
+        bandwidthEstimateBps: Long = 0L,
+        isWifi: Boolean = true,
     ): VideoExtractionResult? {
         val key = ExtractionKey(videoId, forceSabr, audioOnly)
         return extractionCoalescer.run(key) {
-            selectStreams(videoId, forceSabr, audioOnly)
+            selectStreams(videoId, forceSabr, audioOnly, bandwidthEstimateBps, isWifi)
         }
     }
 
@@ -139,6 +144,8 @@ object InnerTubeVideoStreamExtractor {
         videoId: String,
         forceSabr: Boolean,
         audioOnly: Boolean,
+        bandwidthEstimateBps: Long,
+        isWifi: Boolean,
     ): VideoExtractionResult? =
         withContext(Dispatchers.IO) {
             Log.w(TAG, "Extraction start for $videoId (forceSabr=$forceSabr)")
@@ -162,7 +169,7 @@ object InnerTubeVideoStreamExtractor {
 
             var failureReasons = mutableListOf<String>()
             val walledGeneration = WebPoTokenSession.identityGeneration
-            walkLadder(videoId, audioOnly, failureReasons)?.let { return@withContext it }
+            walkLadder(videoId, audioOnly, failureReasons, bandwidthEstimateBps, isWifi)?.let { return@withContext it }
 
             // A wall at /player issues no stream URLs, so no 403 ever reaches the re-roll that GVS
             // refusals trigger, and a retry would ask again with the same walled visitor (#1354).
@@ -172,7 +179,7 @@ object InnerTubeVideoStreamExtractor {
                 PlayerDiagnostics.logWarning(TAG, "bot wall on $videoId, retrying once with a fresh visitor")
                 dropGatesOnIdentityChange()
                 failureReasons = mutableListOf()
-                walkLadder(videoId, audioOnly, failureReasons)?.let { return@withContext it }
+                walkLadder(videoId, audioOnly, failureReasons, bandwidthEstimateBps, isWifi)?.let { return@withContext it }
             }
             val freshVisitorWalled = reroll == PlayerWallReroll.REROLLED || reroll == PlayerWallReroll.FRESH_VISITOR_WALLED
 
@@ -194,6 +201,8 @@ object InnerTubeVideoStreamExtractor {
         videoId: String,
         audioOnly: Boolean,
         failureReasons: MutableList<String>,
+        bandwidthEstimateBps: Long,
+        isWifi: Boolean,
     ): VideoExtractionResult? {
         val liveDetected = booleanArrayOf(false)
 
@@ -224,7 +233,7 @@ object InnerTubeVideoStreamExtractor {
                 liveDetected = liveDetected,
                 retryTimeoutOnce = true,
             )?.let { direct ->
-                val result = if (audioOnly) direct else maybeUpgradeToSabr(videoId, direct, failureReasons)
+                val result = if (audioOnly) direct else maybeUpgradeToSabr(videoId, direct, failureReasons, bandwidthEstimateBps, isWifi)
                 Log.w(TAG, "Extraction OK for $videoId via ${result.usedClient.clientName} (mode=${resultMode(result)})")
                 PlayerDiagnostics.logWarning(TAG, "extract OK $videoId via ${result.usedClient.clientName} mode=${resultMode(result)}")
                 return result
@@ -261,7 +270,7 @@ object InnerTubeVideoStreamExtractor {
         // 3) Gated direct clients. Playable, but GVS stops serving them ~60s in, so they rank
         // below anything attested and are only reached when the paths above are unavailable.
         tryDirectClients(videoId, GATED_FALLBACK_CLIENTS.ungated(), failureReasons, liveDetected = liveDetected)?.let { direct ->
-            val result = if (audioOnly) direct else maybeUpgradeToSabr(videoId, direct, failureReasons)
+            val result = if (audioOnly) direct else maybeUpgradeToSabr(videoId, direct, failureReasons, bandwidthEstimateBps, isWifi)
             Log.w(TAG, "Extraction OK for $videoId via ${result.usedClient.clientName} (mode=${resultMode(result)}/gated)")
             PlayerDiagnostics.logWarning(
                 TAG,
@@ -375,18 +384,27 @@ object InnerTubeVideoStreamExtractor {
         videoId: String,
         direct: VideoExtractionResult,
         failureReasons: MutableList<String>,
+        bandwidthEstimateBps: Long,
+        isWifi: Boolean,
     ): VideoExtractionResult {
         if (direct.isLive || direct.sabrInfo != null) return direct
 
         val directMaxHeight = direct.videoFormats.maxOfOrNull { it.height ?: 0 } ?: 0
         if (!SabrRoutingPolicy.shouldAttemptSabrUpgrade(directMaxHeight)) return direct
+        if (!SabrRoutingPolicy.shouldAttemptSabrUpgrade(directMaxHeight, bandwidthEstimateBps, isWifi)) {
+            Log.w(
+                TAG,
+                "Skipping SABR upgrade for $videoId: bandwidth estimate ${bandwidthEstimateBps / 1_000_000}Mbps on mobile data; playing direct ${directMaxHeight}p",
+            )
+            return direct
+        }
 
         Log.w(
             TAG,
             "Direct ladder for $videoId capped at ${directMaxHeight}p (< ${SabrRoutingPolicy.QUALITY_UPGRADE_FLOOR}p); attempting SABR upgrade",
         )
         val sabr =
-            withTimeoutOrNull(SabrRoutingPolicy.UPGRADE_BUDGET_MS) { trySabrClients(videoId, failureReasons) }
+            withTimeoutOrNull(SabrRoutingPolicy.upgradeBudgetMs(isWifi)) { trySabrClients(videoId, failureReasons) }
                 ?: return direct.also {
                     PlayerDiagnostics.logWarning(TAG, "SABR upgrade unavailable or out of budget for $videoId, playing direct")
                 }
