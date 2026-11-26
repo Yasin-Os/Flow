@@ -135,13 +135,13 @@ class VideoPlayerViewModelEntryPointsTest {
 
             advanceUntilIdle()
             assertThat(viewModel.uiState.value.resumedInMiniPlayer).isTrue()
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("hist_1", forceSabr = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("hist_1", forceSabr = false, isWifi = false) }
 
             viewModel.clearResumedInMiniPlayer()
             assertThat(viewModel.uiState.value.resumedInMiniPlayer).isFalse()
 
             viewModel.resumeRestoredSession()
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("hist_1", forceSabr = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("hist_1", forceSabr = false, isWifi = false) }
         }
 
     @Test
