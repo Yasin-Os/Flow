@@ -21,11 +21,11 @@ import io.github.aedev.flow.data.recommendation.NeighbourChannelsRepository
 import io.github.aedev.flow.data.repository.YouTubeRepository
 import io.github.aedev.flow.data.shorts.ShortsFeedRepository
 import io.github.aedev.flow.data.subscriptions.HomeSubscriptionUploads
-import io.github.aedev.flow.utils.NetworkState
 import io.github.aedev.flow.ui.screens.home.chips.ChipFeedContext
 import io.github.aedev.flow.ui.screens.home.chips.HomeChip
 import io.github.aedev.flow.ui.screens.home.chips.HomeChipFeeds
 import io.github.aedev.flow.ui.screens.home.chips.HomeChipsState
+import io.github.aedev.flow.utils.NetworkState
 import io.github.aedev.flow.utils.PerformanceDispatcher
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
