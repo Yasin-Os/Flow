@@ -133,7 +133,7 @@ class VideoPlayerViewModelFetchCountsTest {
                 cancelAndIgnoreRemainingEvents()
             }
 
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false, isWifi = false) }
             verify(exactly = 1) { harness.playerPreferences.rytdEnabled }
             coVerify(exactly = 1) { YouTube.player("vid_a", any(), any(), any(), any(), any(), any()) }
             verifyOrder {
@@ -166,7 +166,7 @@ class VideoPlayerViewModelFetchCountsTest {
             val terminal = viewModel.uiState.value
             assertThat(terminal.isLoading).isFalse()
             assertThat(terminal.error).isEqualTo("res:${R.string.error_generic}")
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false, isWifi = false) }
             verify(exactly = 1) { harness.playerPreferences.rytdEnabled }
             coVerify(exactly = 1) { YouTube.player("vid_a", any(), any(), any(), any(), any(), any()) }
             verify(exactly = 0) { harness.playerManager.pause() }
@@ -219,7 +219,7 @@ class VideoPlayerViewModelFetchCountsTest {
             assertThat(terminal.cachedVideo).isNull()
             assertThat(terminal.isLoading).isFalse()
             assertThat(terminal.error).isEqualTo("res:${R.string.error_generic}")
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("ext_1", forceSabr = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("ext_1", forceSabr = false, isWifi = false) }
             verify(exactly = 1) { harness.playerPreferences.rytdEnabled }
             coVerify(exactly = 1) { YouTube.player("ext_1", any(), any(), any(), any(), any(), any()) }
             verify(exactly = 0) { harness.playerManager.startBackgroundService(any(), any(), any(), any()) }
@@ -233,8 +233,8 @@ class VideoPlayerViewModelFetchCountsTest {
             val videoB = video("vid_b")
             val gateA = CompletableDeferred<InnerTubeVideoStreamExtractor.VideoExtractionResult?>()
             val gateB = CompletableDeferred<InnerTubeVideoStreamExtractor.VideoExtractionResult?>()
-            coEvery { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false) } coAnswers { gateA.await() }
-            coEvery { InnerTubeVideoStreamExtractor.extract("vid_b", forceSabr = false) } coAnswers { gateB.await() }
+            coEvery { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false, isWifi = false) } coAnswers { gateA.await() }
+            coEvery { InnerTubeVideoStreamExtractor.extract("vid_b", forceSabr = false, isWifi = false) } coAnswers { gateB.await() }
 
             viewModel.uiState.test {
                 awaitItem()
@@ -265,8 +265,8 @@ class VideoPlayerViewModelFetchCountsTest {
                 cancelAndIgnoreRemainingEvents()
             }
 
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false) }
-            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_b", forceSabr = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_a", forceSabr = false, isWifi = false) }
+            coVerify(exactly = 1) { InnerTubeVideoStreamExtractor.extract("vid_b", forceSabr = false, isWifi = false) }
         }
 
     @Test
