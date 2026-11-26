@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.common.util.NetworkTypeObserver
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
@@ -19,6 +20,7 @@ import androidx.media3.exoplayer.upstream.BandwidthMeter
 import androidx.media3.exoplayer.upstream.DefaultBandwidthMeter
 import androidx.media3.exoplayer.util.EventLogger
 import io.github.aedev.flow.BuildConfig
+import io.github.aedev.flow.data.local.BufferProfile
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.player.analytics.PlaybackSessionStats
 import io.github.aedev.flow.player.audio.shouldHandleAudioFocus
@@ -44,6 +46,7 @@ class PlayerFactory {
         val maxBufferMs: Int,
         val bufferForPlaybackMs: Int,
         val bufferRebufferMs: Int,
+        val bufferProfile: BufferProfile,
         val playDuringCalls: Boolean,
         val bandwidthSeeds: Map<Int, Long>,
     )
@@ -69,6 +72,7 @@ class PlayerFactory {
             maxBufferMs = prefs.maxBufferMs.first(),
             bufferForPlaybackMs = prefs.bufferForPlaybackMs.first(),
             bufferRebufferMs = prefs.bufferForPlaybackAfterRebufferMs.first(),
+            bufferProfile = prefs.bufferProfile.first(),
             playDuringCalls = prefs.playDuringCalls.first(),
             bandwidthSeeds = freshSeeds(prefs),
         )
@@ -76,6 +80,12 @@ class PlayerFactory {
 
     private suspend fun freshSeeds(prefs: PlayerPreferences): Map<Int, Long> =
         BandwidthSeeds.fresh(BandwidthSeeds.decode(prefs.bandwidthSeeds.first()), System.currentTimeMillis())
+
+    /** A fresh stored seed for the network this device is on right now, or null when the session starts from a guess. */
+    fun freshSeedBitsForCurrentNetwork(context: Context): Long? {
+        val networkType = NetworkTypeObserver.getInstance(context).networkType
+        return ensurePrefs(context).bandwidthSeeds[networkType]
+    }
 
     /** Seeded from this network type's last measured speed when recent, else Media3's per-country table. */
     fun createBandwidthMeter(context: Context): DefaultBandwidthMeter =
@@ -123,12 +133,17 @@ class PlayerFactory {
 
     fun createLoadControl(context: Context): DefaultLoadControl {
         val prefs = ensurePrefs(context)
+        // A metered link starts video on the slow-network gates (1 s to start, 2 s to resume)
+        // when the viewer is on the STABLE profile's defaults; min/max buffer are unchanged,
+        // and a Custom profile the viewer tuned by hand is never overridden. Shorts and music
+        // keep their own profiles.
+        val slowNetwork = prefs.bufferProfile == BufferProfile.STABLE && !NetworkState.isOnWifi(context)
         return LoadControlFactory.forVideo(
             context = context,
             minMs = prefs.minBufferMs,
             maxMs = prefs.maxBufferMs,
-            playbackMs = prefs.bufferForPlaybackMs,
-            rebufferMs = prefs.bufferRebufferMs,
+            playbackMs = if (slowNetwork) PlayerConfig.CELLULAR_BUFFER_FOR_PLAYBACK_MS else prefs.bufferForPlaybackMs,
+            rebufferMs = if (slowNetwork) PlayerConfig.CELLULAR_BUFFER_FOR_REBUFFER_MS else prefs.bufferRebufferMs,
         )
     }
 
