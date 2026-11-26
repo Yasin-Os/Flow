@@ -1305,7 +1305,12 @@ class EnhancedPlayerManager private constructor() {
             qualityManager?.setCurrentStream(currentVideoStream)
             qualityManager?.setManualMode(VideoCodecUtils.qualityHeightFromStream(videoStream))
         } else {
-            val smartStream = qualityManager?.selectSmartInitialQuality()
+            val context = appContext
+            val smartStream =
+                qualityManager?.selectSmartInitialQuality(
+                    isWifi = context?.let { NetworkState.isOnWifi(it) } ?: true,
+                    hasFreshBandwidthSeed = context?.let { playerFactory.freshSeedBitsForCurrentNetwork(it) != null } ?: true,
+                )
             currentVideoStream = smartStream ?: availableVideoStreams.firstOrNull()
             qualityManager?.setCurrentStream(currentVideoStream)
         }
