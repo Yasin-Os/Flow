@@ -2,8 +2,8 @@ package io.github.aedev.flow.data.contentfilter.family
 
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.data.model.Video
-import kotlin.random.Random
 import org.junit.Test
+import kotlin.random.Random
 
 class FamilySuggestionRankerTest {
     private val channels =
