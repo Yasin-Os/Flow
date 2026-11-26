@@ -98,15 +98,30 @@ object PlayerConfig {
     /** Share of the bandwidth estimate a stream may use, for Auto's own picks and Media3's ladder alike. */
     const val AUTO_BANDWIDTH_FRACTION = 0.7f
 
+    /**
+     * The tallest rung Auto opens at on mobile data when no fresh bandwidth seed says the link
+     * is faster: the estimate is a guess then, and opening at 720p/1080p makes the first
+     * segments crawl. ABR still ramps up after 5 s of buffer; Wi-Fi and manual picks are unchanged.
+     */
+    const val CELLULAR_INITIAL_QUALITY_CAP_HEIGHT = 360
+
+    /**
+     * Start and resume gates for video on a metered link, for the STABLE profile only (min/max
+     * buffer unchanged): the player starts after 1 s of media instead of 2.5 s, and resumes
+     * after 2 s instead of 5 s. Shorts (250 ms) and Music (1,000 ms) keep their own profiles.
+     */
+    const val CELLULAR_BUFFER_FOR_PLAYBACK_MS = 1_000
+    const val CELLULAR_BUFFER_FOR_REBUFFER_MS = 2_000
+
     /** Buffer a ladder needs before Media3 moves it up a quality (Media3's default is 10 s). */
     const val ABR_MIN_BUFFER_FOR_QUALITY_INCREASE_MS = 5_000
 
     /**
      * Media3 holds the current quality while more than this is buffered. At its 25 s default a full
-     * 45 s buffer drains for 20 s before a collapsed network steps down; the midpoint of the 20 s to
-     * 45 s window it was tuned on cuts that to 12.5 s.
+     * 45 s buffer drains for 20 s before a collapsed network steps down; at 45 s the step down
+     * comes after about 5 s of drain instead of about 17.5 s.
      */
-    const val ABR_MAX_BUFFER_FOR_QUALITY_DECREASE_MS = 32_500
+    const val ABR_MAX_BUFFER_FOR_QUALITY_DECREASE_MS = 45_000
 
     /** Interval for bandwidth checks during playback (5 seconds) */
     const val BANDWIDTH_CHECK_INTERVAL_MS = 5000L
@@ -120,8 +135,8 @@ object PlayerConfig {
     /** Maximum stream errors before quality downgrade */
     const val MAX_STREAM_ERRORS = 2
 
-    /** Buffering count threshold before quality downgrade */
-    const val BUFFERING_COUNT_THRESHOLD = 3
+    /** Buffering count threshold before quality downgrade: the first stall steps down at once. */
+    const val BUFFERING_COUNT_THRESHOLD = 1
 
     // ===== Position Tracking =====
 
