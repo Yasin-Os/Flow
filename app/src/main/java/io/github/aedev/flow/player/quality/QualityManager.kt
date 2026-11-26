@@ -162,10 +162,19 @@ class QualityManager(
 
     /**
      * Select smart initial quality based on bandwidth.
+     *
+     * On mobile data with no fresh bandwidth seed the estimate is a guess, so the opening pick is
+     * capped at 360p and ABR ramps up from there once the link proves itself. Wi-Fi, a fresh seed
+     * and a manual quality choice are all unchanged.
      */
-    fun selectSmartInitialQuality(): VideoStream? {
+    fun selectSmartInitialQuality(
+        isWifi: Boolean = true,
+        hasFreshBandwidthSeed: Boolean = true,
+    ): VideoStream? {
         val estimatedBandwidth = bandwidthMeter?.bitrateEstimate ?: PlayerConfig.INITIAL_BANDWIDTH_ESTIMATE
-        val smartStream = AutoQualityPolicy.initialPick(autoStreams(), estimatedBandwidth, preferredCodecKey)
+        val maxInitialHeight =
+            if (!isWifi && !hasFreshBandwidthSeed) PlayerConfig.CELLULAR_INITIAL_QUALITY_CAP_HEIGHT else null
+        val smartStream = AutoQualityPolicy.initialPick(autoStreams(), estimatedBandwidth, preferredCodecKey, maxInitialHeight)
         Log.d(
             TAG,
             "Smart quality selection: bandwidth=${estimatedBandwidth / 1_000_000}Mbps, selected=${smartStream?.let(::qualityHeight)}p",
