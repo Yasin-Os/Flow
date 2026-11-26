@@ -249,9 +249,8 @@ internal class PlayerSecondaryMetadataLoader(
     /**
      * The chapter list, off the same watch response.
      *
-     * Not held behind [awaitPlaybackStarted] like the read-outs around it: chapters are drawn into
-     * the seek bar itself, so arriving after the first scrub means the bar changes shape under the
-     * finger already dragging it.
+     * Held behind [awaitPlaybackStarted] like the read-outs around it: chapters are drawn into
+     * the seek bar, so they still arrive with the first frame, before any scrub could move it.
      */
     fun loadChapters(
         videoId: String,
@@ -261,6 +260,8 @@ internal class PlayerSecondaryMetadataLoader(
 
         chaptersLoad.job =
             scope.launch(networkDispatcher) {
+                awaitPlaybackStarted(videoId)
+                if (!isPlaybackCurrent(loadToken)) return@launch
                 val chapters =
                     withTimeoutOrNull(CHAPTERS_TIMEOUT_MS) { repository.videoChapters(videoId) }
                         ?.takeIf { it.isNotEmpty() } ?: return@launch
