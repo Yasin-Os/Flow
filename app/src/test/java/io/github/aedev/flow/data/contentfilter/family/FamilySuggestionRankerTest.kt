@@ -2,6 +2,7 @@ package io.github.aedev.flow.data.contentfilter.family
 
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.data.model.Video
+import kotlin.random.Random
 import org.junit.Test
 
 class FamilySuggestionRankerTest {
@@ -332,6 +333,18 @@ class FamilySuggestionRankerTest {
         assertThat(FamilySuggestionRanker.rank(pool, channels, text))
             .containsExactlyElementsIn(fullScanRank(pool, FamilySuggestionRanker.HOME_SUGGESTIONS_MAX))
             .inOrder()
+    }
+
+    @Test
+    fun `rank matches the full scan on a shuffled pool, ties included`() {
+        // A shuffled pool reorders equal-timestamp videos, so the heap's pool-index tie-break
+        // is the only thing keeping the output identical to the stable full sort.
+        val pool = realisticPool().shuffled(Random(20261126))
+        for (limit in listOf(1, 5, 20)) {
+            assertThat(FamilySuggestionRanker.rank(pool, channels, text, limit))
+                .containsExactlyElementsIn(fullScanRank(pool, limit))
+                .inOrder()
+        }
     }
 
     /**
