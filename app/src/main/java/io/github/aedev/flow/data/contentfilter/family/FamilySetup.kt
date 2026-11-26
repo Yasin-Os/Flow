@@ -2,7 +2,7 @@ package io.github.aedev.flow.data.contentfilter.family
 
 import android.util.Log
 import io.github.aedev.flow.data.local.PlayerPreferences
-import io.github.aedev.flow.player.preferences.ThumbnailQuality
+import io.github.aedev.flow.data.local.ThumbnailQuality
 
 /**
  * First-launch family setup, run from [io.github.aedev.flow.FlowApplication] on an IO coroutine.
