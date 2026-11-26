@@ -2276,6 +2276,18 @@ class PlayerPreferences(
         }
     }
 
+    /**
+     * Same as [setThumbnailQualityCellular] but only when the viewer never chose one: the family
+     * seed sets the MEDIUM default once and never overwrites an explicit choice on later launches.
+     */
+    suspend fun setThumbnailQualityCellularIfUnset(quality: ThumbnailQuality) {
+        context.devicePreferencesDataStore.edit { prefs ->
+            if (prefs[DeviceKeys.THUMBNAIL_QUALITY_CELLULAR] == null) {
+                prefs[DeviceKeys.THUMBNAIL_QUALITY_CELLULAR] = quality.name
+            }
+        }
+    }
+
     /** The level for the network the device is on now, for work that has no composition to read it from. */
     suspend fun currentThumbnailQuality(): ThumbnailQuality =
         ThumbnailQuality.effective(NetworkState.isOnWifi(context), thumbnailQualityWifi.first(), thumbnailQualityCellular.first())
