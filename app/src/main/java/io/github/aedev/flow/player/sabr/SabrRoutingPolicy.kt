@@ -24,8 +24,37 @@ object SabrRoutingPolicy {
      */
     const val UPGRADE_BUDGET_MS = 3_000L
 
+    /**
+     * The same wait on a metered link: the direct result ships after 1 s instead of 3 s.
+     * The upgrade only ever adds quality, never playability, so a short budget cannot regress it.
+     */
+    const val CELLULAR_UPGRADE_BUDGET_MS = 1_000L
+
+    /** How long the upgrade waits on each network: 3 s on Wi-Fi, 1 s on mobile data. */
+    fun upgradeBudgetMs(isWifi: Boolean): Long = if (isWifi) UPGRADE_BUDGET_MS else CELLULAR_UPGRADE_BUDGET_MS
+
+    /**
+     * Below this measured bandwidth the SABR upgrade is not worth its wait: minting a token and
+     * downloading the player script on a ~1 Mbps link costs more than the higher rungs are worth
+     * for a first frame, and the direct result already plays.
+     */
+    const val SABR_UPGRADE_MIN_BANDWIDTH_BPS = 2_000_000L
+
     /** True when the best direct video height is low enough to justify attempting a SABR upgrade. */
     fun shouldAttemptSabrUpgrade(directMaxHeight: Int): Boolean = directMaxHeight < QUALITY_UPGRADE_FLOOR
+
+    /**
+     * The bandwidth-gated upgrade check. Wi-Fi always attempts it; on mobile data an estimate
+     * below [SABR_UPGRADE_MIN_BANDWIDTH_BPS] skips it. An unknown estimate (0, the meter has
+     * not been built yet) still attempts it, inside the cellular 1 s budget.
+     */
+    fun shouldAttemptSabrUpgrade(
+        directMaxHeight: Int,
+        bandwidthEstimateBps: Long,
+        isWifi: Boolean,
+    ): Boolean =
+        shouldAttemptSabrUpgrade(directMaxHeight) &&
+            (isWifi || bandwidthEstimateBps <= 0L || bandwidthEstimateBps >= SABR_UPGRADE_MIN_BANDWIDTH_BPS)
 
     /**
      * Whether to route playback through SABR. Prefer it when a caller forces escalation (e.g. a
