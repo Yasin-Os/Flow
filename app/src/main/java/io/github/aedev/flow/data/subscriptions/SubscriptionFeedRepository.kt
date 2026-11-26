@@ -136,7 +136,7 @@ class SubscriptionFeedRepository
 
         /**
          * In family mode a refresh covers only the stalest slice of the seed, so a routine cycle
-         * never sweeps all 243 channels at once; the oldest-first order rotates the rest in.
+         * never sweeps all 500 channels at once; the oldest-first order rotates the rest in.
          * Outside family mode there is no cap.
          */
         private fun familyRefreshBudget(): Int? = FAMILY_REFRESH_MAX_CHANNELS.takeIf { FamilyMode.ENABLED }
@@ -483,7 +483,7 @@ class SubscriptionFeedRepository
             /** Progress previews show at most what the feed read itself loads. */
             const val PREVIEW_MAX_ITEMS = 1500
 
-            /** Channels a single refresh covers in family mode: a quarter of the 243-channel seed. */
+            /** Channels a single refresh covers in family mode: 12% of the 500-channel seed. */
             const val FAMILY_REFRESH_MAX_CHANNELS = 60
 
             /** A group read binds every id twice; this keeps it inside SQLite's 999 variables. */
