@@ -13,6 +13,11 @@ data class PlaybackResolutionRequest(
     val allowShorts: Boolean,
     /** Creators the viewer has blocked; their videos never enter the related list. */
     val blockedChannelIds: Set<String> = emptySet(),
+    /**
+     * The player meter's current estimate in bits per second (0 when unknown): on mobile data
+     * below ~2 Mbps the SABR quality upgrade is skipped and the playable direct result ships.
+     */
+    val bandwidthEstimateBps: Long = 0L,
 )
 
 /** Why a resolution produced nothing to play, and therefore which error string the screen shows. */
