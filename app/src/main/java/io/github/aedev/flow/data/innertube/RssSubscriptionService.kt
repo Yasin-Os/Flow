@@ -88,11 +88,22 @@ class RssSubscriptionService
         private val channelReelIndex: ChannelReelIndex,
         private val channelUploads: ChannelUploadsClient,
     ) {
+        /**
+         * Which channels the checks stage still reads tabs for.
+         *
+         * When [limitTabReadsToRssFailures] is set, a channel whose RSS answered is taken as
+         * settled from its feed alone, so its tab reads wait for a faster connection and the
+         * sweep spends its requests on the channels RSS could not reach at all. The Shorts
+         * checks still run, so a held slice is classified before it is shown, and a channel
+         * RSS settled still counts as settled and is stamped fresh. Off, every channel the
+         * old rules flag still gets its tabs read.
+         */
         fun fetchSubscriptionVideos(
             channelIds: List<String>,
             knownVideoIds: Set<String> = emptySet(),
             storedReelVerdicts: Map<String, Boolean> = emptyMap(),
             readAllTabs: Boolean = false,
+            limitTabReadsToRssFailures: Boolean = false,
         ): Flow<SubscriptionFeedChunk> =
             flow {
                 val uniqueChannelIds = channelIds.distinct()
@@ -133,13 +144,13 @@ class RssSubscriptionService
                             classified == null -> {
                                 sweep.rssAnswered += channelId
                                 sweep.held[channelId] = result
-                                if (readAllTabs && result.hasRecent) sweep.needsTabs += channelId
+                                if (!limitTabReadsToRssFailures && readAllTabs && result.hasRecent) sweep.needsTabs += channelId
                             }
 
                             else -> {
                                 sweep.rssAnswered += channelId
                                 sweep.add(classified)
-                                if (result.needsTabs(classified, readAllTabs)) sweep.needsTabs += channelId
+                                if (!limitTabReadsToRssFailures && result.needsTabs(classified, readAllTabs)) sweep.needsTabs += channelId
                             }
                         }
                     }
@@ -176,7 +187,7 @@ class RssSubscriptionService
                             sweep.incomplete += channelId
                         } else {
                             sweep.add(classified)
-                            if (result.needsTabs(classified, readAllTabs)) sweep.needsTabs += channelId
+                            if (!limitTabReadsToRssFailures && result.needsTabs(classified, readAllTabs)) sweep.needsTabs += channelId
                         }
                         if (channelId !in sweep.needsTabs) processedChecks++
                     }
