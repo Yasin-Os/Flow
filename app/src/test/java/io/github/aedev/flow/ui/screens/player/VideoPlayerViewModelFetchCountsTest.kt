@@ -87,7 +87,7 @@ class VideoPlayerViewModelFetchCountsTest {
             viewModel.playVideo(row.copy(title = "", channelName = "", thumbnailUrl = "", duration = 0))
             advanceUntilIdle()
 
-            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any()) }
+            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any(), isWifi = any()) }
             coVerify(exactly = 0) { YouTube.player(any(), any(), any(), any(), any(), any(), any()) }
             coVerify(exactly = 1) { harness.repository.enrichFromWatchMetadata(any()) }
             // The family app never fetches related candidates: recommendations are off.
@@ -189,7 +189,7 @@ class VideoPlayerViewModelFetchCountsTest {
             assertThat(terminal.error).isEqualTo("res:${R.string.error_all_stream_sources_failed}")
             assertThat(terminal.errorHint).isEqualTo("res:${R.string.error_playback_retry_hint}")
             coVerify(exactly = 1) { harness.playerPreferences.markVideoUnplayable("vid_a") }
-            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any()) }
+            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any(), isWifi = any()) }
             coVerify(exactly = 0) { harness.playerManager.clearCacheForCurrentVideo() }
         }
 
