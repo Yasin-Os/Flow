@@ -2,6 +2,7 @@ package io.github.aedev.flow.ui.screens.home
 
 import android.util.Log
 import io.github.aedev.flow.data.local.HomeFeedCacheRepository
+import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SubscriptionRepository
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.recommendation.ChannelMemoryRepository
@@ -11,6 +12,7 @@ import io.github.aedev.flow.data.recommendation.NeighbourChannelsRepository
 import io.github.aedev.flow.data.recommendation.NeuroScoring
 import io.github.aedev.flow.data.subscriptions.HomeSubscriptionUploads
 import io.github.aedev.flow.data.subscriptions.SubscriptionFeedRepository
+import io.github.aedev.flow.data.subscriptions.SubscriptionRefreshPlanner
 import io.github.aedev.flow.innertube.pages.renderer.FeedItemOwner
 import io.github.aedev.flow.utils.PerformanceDispatcher
 import kotlinx.coroutines.CancellationException
@@ -30,6 +32,7 @@ internal class HomeLateMerges(
     private val neighbourChannels: NeighbourChannelsRepository,
     private val feedSources: HomeFeedSources,
     private val persistentHomeFeedCache: HomeFeedCacheRepository,
+    private val playerPreferences: PlayerPreferences,
 ) {
     private companion object {
         const val MAX_SAVED_SEEDS = 5
@@ -68,6 +71,16 @@ internal class HomeLateMerges(
         if (userSubs.isEmpty() || subsTopUpJob?.isActive == true) return
         subsTopUpJob =
             scope.launch(PerformanceDispatcher.networkIO) {
+                // The refresh cycle just stamped the store minutes ago; re-fetching every
+                // channel tab now would re-download what the store already holds. Skip when
+                // the last refresh is inside the 30 min TTL.
+                val lastRefresh = playerPreferences.subscriptionLastRefreshTime.first()
+                if (lastRefresh > 0L &&
+                    System.currentTimeMillis() - lastRefresh < SubscriptionRefreshPlanner.CHANNEL_FEED_TTL_MS
+                ) {
+                    Log.d(HOME_LOG_TAG, "Subscription top-up skipped: feed refreshed ${System.currentTimeMillis() - lastRefresh}ms ago")
+                    return@launch
+                }
                 val uploads =
                     try {
                         homeSubscriptionUploads.fetch(
