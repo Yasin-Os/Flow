@@ -6,6 +6,13 @@ import io.github.aedev.flow.data.recommendation.FeedExclusions
 internal const val FRESH_UPLOAD_MAX_SIGHTINGS = 3
 internal const val HOME_TARGET_SIZE = 40
 
+/**
+ * First launch only: the refresh collection stops once this many videos are in hand, instead of
+ * waiting for a full 40-video page. A screenful is enough to paint on; the top-up and later
+ * refresh cycles fill the rest. The 30 s bound still applies.
+ */
+internal const val FIRST_LAUNCH_TARGET_SIZE = 16
+
 // No channel twice within this many cards, across pages and late arrivals.
 internal const val RECENT_CHANNEL_WINDOW = 20
 
