@@ -1306,10 +1306,17 @@ class EnhancedPlayerManager private constructor() {
             qualityManager?.setManualMode(VideoCodecUtils.qualityHeightFromStream(videoStream))
         } else {
             val context = appContext
+            // A seed lookup that cannot run (no readable prefs, as in a unit test) counts as
+            // having a fresh seed: capping the first pick is an optimisation, and a failed
+            // lookup must never break playback or change the pick.
+            val hasFreshSeed =
+                context?.let { ctx ->
+                    runCatching { playerFactory.freshSeedBitsForCurrentNetwork(ctx) != null }.getOrDefault(true)
+                } ?: true
             val smartStream =
                 qualityManager?.selectSmartInitialQuality(
                     isWifi = context?.let { NetworkState.isOnWifi(it) } ?: true,
-                    hasFreshBandwidthSeed = context?.let { playerFactory.freshSeedBitsForCurrentNetwork(it) != null } ?: true,
+                    hasFreshBandwidthSeed = hasFreshSeed,
                 )
             currentVideoStream = smartStream ?: availableVideoStreams.firstOrNull()
             qualityManager?.setCurrentStream(currentVideoStream)
