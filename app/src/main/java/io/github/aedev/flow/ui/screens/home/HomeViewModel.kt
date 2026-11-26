@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -86,6 +87,7 @@ class HomeViewModel
         val uiState: StateFlow<HomeUiState> =
             _uiState
                 .map(HomeUiState::withUniqueLazyContent)
+                .flowOn(PerformanceDispatcher.parsing)
                 .stateIn(
                     scope = viewModelScope,
                     started = SharingStarted.WhileSubscribed(UI_STATE_SUBSCRIPTION_TIMEOUT_MS),
