@@ -2,6 +2,7 @@ package io.github.aedev.flow.data.subscriptions
 
 import android.util.Log
 import androidx.room.withTransaction
+import io.github.aedev.flow.FlowApplication
 import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.innertube.RssSubscriptionService
 import io.github.aedev.flow.data.innertube.SubscriptionRefreshStage
@@ -16,6 +17,7 @@ import io.github.aedev.flow.data.model.VideoCollaborator
 import io.github.aedev.flow.data.model.toUiModel
 import io.github.aedev.flow.data.subscriptions.SubscriptionFeedMerger.preservingEnrichedMetadata
 import io.github.aedev.flow.di.ProfileDb
+import io.github.aedev.flow.utils.NetworkState
 import io.github.aedev.flow.utils.PerformanceDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -200,12 +202,19 @@ class SubscriptionFeedRepository
             var reelIds = emptySet<String>()
             val writtenChannelIds = HashSet<String>()
 
+            // On mobile data a refresh spends its requests on the channels RSS could not
+            // reach: a channel whose feed answered is taken as settled from RSS alone, so its
+            // tab reads wait for the next Wi-Fi refresh. Family mode only; Wi-Fi keeps the
+            // full checks stage.
+            val limitTabReadsToRssFailures = FamilyMode.ENABLED && !NetworkState.isOnWifi(FlowApplication.appContext)
+
             rssSubscriptionService
                 .fetchSubscriptionVideos(
                     channelIds = plan.channelIds,
                     knownVideoIds = if (plan.isFullRefresh) emptySet() else sliceCached.mapTo(HashSet()) { it.id },
                     storedReelVerdicts = trustedReelVerdicts(cachedRows, lastFeedFetchAt),
                     readAllTabs = plan.readAllTabs,
+                    limitTabReadsToRssFailures = limitTabReadsToRssFailures,
                 ).collect { chunk ->
                     failedChannelIds = chunk.failedChannelIds
                     failedChannelReasons = chunk.failedChannelReasons
