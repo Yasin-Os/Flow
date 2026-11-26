@@ -2,9 +2,14 @@ package io.github.aedev.flow.data.local.entity
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "subscription_feed_cache")
+/**
+ * [timestamp] is indexed: the home feed reads newest-first with a LIMIT, so the order must come
+ * from the index instead of sorting the whole table on every load.
+ */
+@Entity(tableName = "subscription_feed_cache", indices = [Index(value = ["timestamp"])])
 data class SubscriptionFeedEntity(
     @PrimaryKey val videoId: String,
     val title: String,
