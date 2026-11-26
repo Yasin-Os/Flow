@@ -26,6 +26,17 @@ class AutoQualityPolicyTest {
     }
 
     @Test
+    fun `an initial cap holds the pick at or below the cap`() {
+        assertThat(height(AutoQualityPolicy.initialPick(ladder, 7_000_000L, null, maxInitialHeight = 360))).isEqualTo(360)
+        assertThat(height(AutoQualityPolicy.initialPick(ladder, 5_000_000L, null, maxInitialHeight = 480))).isEqualTo(480)
+    }
+
+    @Test
+    fun `a cap below every rung falls back to the uncapped pick`() {
+        assertThat(height(AutoQualityPolicy.initialPick(ladder, 7_000_000L, null, maxInitialHeight = 144))).isEqualTo(1080)
+    }
+
+    @Test
     fun `starts at the lowest quality when nothing fits`() {
         assertThat(height(AutoQualityPolicy.initialPick(ladder, 300_000L, null))).isEqualTo(360)
     }
