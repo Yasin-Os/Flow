@@ -64,7 +64,7 @@ class VideoPlayerViewModelEntryPointsTest {
 
             assertThat(viewModel.uiState.value).isEqualTo(VideoPlayerUiState())
             verify { harness.repository wasNot Called }
-            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any()) }
+            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any(), isWifi = any()) }
             coVerify(exactly = 1) { harness.viewHistory.getLatestUnfinishedVideo() }
             coVerify(exactly = 0) { harness.viewHistory.touchHistoryEntry(any(), any(), any(), any(), any(), any(), any()) }
             verify(exactly = 0) { harness.playerManager.pause() }
@@ -178,7 +178,7 @@ class VideoPlayerViewModelEntryPointsTest {
             verify(exactly = 1) { GlobalPlayerState.setCurrentVideo(video) }
             assertThat(GlobalPlayerState.currentVideo.value).isEqualTo(video)
             verify { harness.repository wasNot Called }
-            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any()) }
+            coVerify(exactly = 0) { InnerTubeVideoStreamExtractor.extract(any(), any(), isWifi = any()) }
             coVerify(exactly = 1) { harness.viewHistory.getSavedPosition("local_1") }
             coVerify(exactly = 0) { harness.viewHistory.touchHistoryEntry(any(), any(), any(), any(), any(), any(), any()) }
         }
