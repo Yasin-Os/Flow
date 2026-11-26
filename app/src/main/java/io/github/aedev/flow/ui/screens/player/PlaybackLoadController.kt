@@ -205,6 +205,7 @@ internal class PlaybackLoadController(
                                 resumePositionOverrideMs = resumePositionOverrideMs,
                                 allowShorts = shortsEnabled,
                                 blockedChannelIds = exclusions.blockedChannelIds,
+                                bandwidthEstimateBps = playerManager.getBandwidthEstimate(),
                             ),
                         isCurrent = { isCurrent(loadToken) },
                         resolveUpcoming = collaborators.upcomingPremiere::resolve,
