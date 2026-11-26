@@ -31,6 +31,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -150,8 +151,10 @@ internal class PlaybackSessionApplier(
         block: () -> Unit,
     ) {
         scope.launch {
+            // firstOrNull, not first: a flow that completes without the video (a mocked
+            // player state in tests) must fall through to the timeout path, not throw.
             withTimeoutOrNull(FIRST_FRAME_WAIT_TIMEOUT_MS) {
-                playerManager.firstFrameVideoId.first { it == load.videoId }
+                playerManager.firstFrameVideoId.firstOrNull { it == load.videoId }
             }
             if (isLoadCurrent(load.token)) block()
         }
