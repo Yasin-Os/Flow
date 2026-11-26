@@ -2,6 +2,9 @@ package io.github.aedev.flow.ui.screens.home
 
 internal const val HOME_PREFETCH_AHEAD_VIDEO_COUNT = 24
 
+/** How far ahead the queue prefetches on mobile data: a short runway, so a slow link is not spent on pages the user never scrolls to. */
+internal const val HOME_PREFETCH_AHEAD_VIDEO_COUNT_CELLULAR = 8
+
 /**
  * Prefetch only starts once fewer than this many loaded videos remain below the viewport.
  *
