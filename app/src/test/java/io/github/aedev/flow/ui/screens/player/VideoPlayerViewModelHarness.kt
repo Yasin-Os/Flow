@@ -133,7 +133,7 @@ internal class VideoPlayerViewModelHarness(
         every { NetworkState.isOnline(any()) } returns true
 
         mockkObject(InnerTubeVideoStreamExtractor)
-        coEvery { InnerTubeVideoStreamExtractor.extract(any(), any()) } returns null
+        coEvery { InnerTubeVideoStreamExtractor.extract(any(), any(), isWifi = any()) } returns null
 
         mockkObject(YouTube)
         coEvery {
