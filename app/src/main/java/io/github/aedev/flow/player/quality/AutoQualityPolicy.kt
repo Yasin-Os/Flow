@@ -10,18 +10,29 @@ import io.github.aedev.flow.player.stream.model.VideoStream
  * so a ladder source and a single-stream source start at the same quality.
  */
 internal object AutoQualityPolicy {
-    /** The tallest quality whose stream fits the budget, in the best-ranked codec at that height. */
+    /**
+     * The tallest quality whose stream fits the budget, in the best-ranked codec at that height.
+     *
+     * [maxInitialHeight] caps the opening pick only: on a slow link with no fresh bandwidth seed
+     * the estimate is a guess, so the first segments start low and ABR ramps up from there. The
+     * cap is ignored when no rung sits at or below it, so a ladder with only higher rungs still plays.
+     */
     fun initialPick(
         streams: List<VideoStream>,
         estimateBps: Long,
         preferredCodec: String?,
+        maxInitialHeight: Int? = null,
     ): VideoStream? {
         if (streams.isEmpty()) return null
         val budget = (estimateBps * PlayerConfig.AUTO_BANDWIDTH_FRACTION).toLong()
         val fitting = streams.filter { it.bitrate.toLong() in 1..budget }
         val height = (fitting.ifEmpty { null }?.maxOf(::height)) ?: streams.minOf(::height)
+        val cappedHeight =
+            maxInitialHeight?.let { cap ->
+                streams.filter { height(it) <= cap }.maxOfOrNull(::height)?.let { minOf(height, it) }
+            } ?: height
         return streams
-            .filter { height(it) == height }
+            .filter { height(it) == cappedHeight }
             .minWithOrNull(
                 compareBy<VideoStream> { VideoCodecUtils.codecRankWithPreference(it, preferredCodec) }
                     .thenBy { if (it.bitrate <= budget) 0 else 1 }
