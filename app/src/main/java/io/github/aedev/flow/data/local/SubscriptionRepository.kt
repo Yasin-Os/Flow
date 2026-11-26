@@ -146,7 +146,12 @@ class SubscriptionRepository private constructor(
         }
 
     /**
-     * Get all subscriptions
+     * Get all subscriptions.
+     *
+     * The decoded list is memoized in memory: a launch re-reads the store 4-5 times, and with
+     * 500 channels each read decoded 500 JSON records. The memo is keyed on the raw stored
+     * strings, so any change — subscribe, unsubscribe, a refresh stamping fetch times — misses
+     * the memo and re-decodes exactly once, and an unchanged store returns the same list.
      */
     fun getAllSubscriptions(): Flow<List<ChannelSubscription>> =
         context.subscriptionsDataStore.data.map { preferences ->
@@ -155,12 +160,26 @@ class SubscriptionRepository private constructor(
                 emptyList()
             } else {
                 val orderList = orderString.split(",")
-                orderList.mapNotNull { channelId ->
-                    val channelData = preferences[channelKey(channelId)]
-                    channelData?.let { deserializeChannel(it) }
+                val raw = orderList.map { channelId -> preferences[channelKey(channelId)] }
+                synchronized(subscriptionsMemoLock) {
+                    val memo = subscriptionsMemo
+                    if (memo != null && memo.first == raw) {
+                        memo.second
+                    } else {
+                        val decoded =
+                            orderList.mapIndexedNotNull { index, channelId ->
+                                raw[index]?.let { deserializeChannel(it) }
+                            }
+                        subscriptionsMemo = raw to decoded
+                        decoded
+                    }
                 }
             }
         }
+
+    /** The last snapshot [getAllSubscriptions] decoded, with the raw strings it came from. */
+    private val subscriptionsMemoLock = Any()
+    private var subscriptionsMemo: Pair<List<String?>, List<ChannelSubscription>>? = null
 
     /** The channels whose bell is on. */
     fun notifyingChannelIds(): Flow<Set<String>> =
