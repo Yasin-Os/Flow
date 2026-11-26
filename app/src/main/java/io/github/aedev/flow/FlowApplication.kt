@@ -15,6 +15,7 @@ import io.github.aedev.flow.data.contentfilter.aislist.AiListRepository
 import io.github.aedev.flow.data.contentfilter.family.FamilyBlocklistRepository
 import io.github.aedev.flow.data.contentfilter.family.FamilyMode
 import io.github.aedev.flow.data.contentfilter.family.FamilySetup
+import io.github.aedev.flow.data.contentfilter.family.FamilyTextMatcher
 import io.github.aedev.flow.data.contentfilter.family.FamilyWhitelistRepository
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SubscriptionRepository
@@ -199,6 +200,16 @@ class FlowApplication :
             FamilyMode.textMatcher = familyBlocklist::currentMatcher
             launch {
                 FamilySetup.seedIfNeeded(familyWhitelist, playerPreferences)
+                // The text matcher's giant patterns compile on first use; compile them here,
+                // on this IO coroutine, so the first feed load does not pay for it. The
+                // blocklist rebuilds its matcher once when its stored words load, so warm the
+                // settled instance, not the DEFAULT placeholder — and fall back to whatever
+                // the provider holds now if the rebuild has not landed in 10 s.
+                val matcher =
+                    withTimeoutOrNull(10_000L) {
+                        familyBlocklist.matcher.first { it !== FamilyTextMatcher.DEFAULT }
+                    } ?: FamilyMode.textMatcher()
+                runCatching { matcher.warmup() }.onFailure { Log.w(TAG, "Family regex warmup failed", it) }
             }
             launch { profileWorkReconciler.reconcile() }
             launch { AutoBackupWorker.keepScheduled(this@FlowApplication) }
